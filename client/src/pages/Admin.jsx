@@ -44,7 +44,7 @@ export default function Admin() {
   const [showAddInjury, setShowAddInjury] = useState(false);
 
   const [message, setMessage] = useState(null);
-  const { authFetch, token } = useAuth();
+  const { authFetch } = useAuth();
 
   const loadAll = () => {
     Promise.allSettled([
@@ -132,8 +132,12 @@ export default function Admin() {
   const handleAddPlayer = async (e) => {
     e.preventDefault();
     if (!playerForm.name.trim()) { flash('Nome obbligatorio', 'error'); return; }
-    const res = await fetch('/api/admin/players', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: buildPlayerFD() });
-    if (!res.ok) { const d = await res.json(); flash(d.error, 'error'); return; }
+    const res = await authFetch('/api/admin/players', { method: 'POST', body: buildPlayerFD() });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      flash(d.error || 'Errore durante l\'aggiunta del giocatore', 'error');
+      return;
+    }
     flash('Giocatore aggiunto!'); resetPlayer(); loadAll();
   };
 
@@ -145,8 +149,12 @@ export default function Admin() {
 
   const handleUpdatePlayer = async (e) => {
     e.preventDefault();
-    const res = await fetch(`/api/admin/players/${editingPlayerId}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: buildPlayerFD() });
-    if (!res.ok) { const d = await res.json(); flash(d.error, 'error'); return; }
+    const res = await authFetch(`/api/admin/players/${editingPlayerId}`, { method: 'PUT', body: buildPlayerFD() });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      flash(d.error || 'Errore durante l\'aggiornamento del giocatore', 'error');
+      return;
+    }
     flash('Giocatore aggiornato!'); resetPlayer(); loadAll();
   };
 
@@ -181,8 +189,12 @@ export default function Admin() {
   const handleAddNews = async (e) => {
     e.preventDefault();
     if (!newsForm.title.trim() || !newsForm.content.trim()) { flash('Titolo e contenuto obbligatori', 'error'); return; }
-    const res = await fetch('/api/admin/news', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: buildNewsFD() });
-    if (!res.ok) { const d = await res.json(); flash(d.error, 'error'); return; }
+    const res = await authFetch('/api/admin/news', { method: 'POST', body: buildNewsFD() });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      flash(d.error || 'Errore durante la pubblicazione della news', 'error');
+      return;
+    }
     flash('News pubblicata!'); resetNews(); loadAll();
   };
 
@@ -190,8 +202,12 @@ export default function Admin() {
 
   const handleUpdateNews = async (e) => {
     e.preventDefault();
-    const res = await fetch(`/api/admin/news/${editingNewsId}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: buildNewsFD() });
-    if (!res.ok) { const d = await res.json(); flash(d.error, 'error'); return; }
+    const res = await authFetch(`/api/admin/news/${editingNewsId}`, { method: 'PUT', body: buildNewsFD() });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      flash(d.error || 'Errore durante l\'aggiornamento della news', 'error');
+      return;
+    }
     flash('News aggiornata!'); resetNews(); loadAll();
   };
 
@@ -634,8 +650,17 @@ export default function Admin() {
   }
 
   async function toggleVerified(u) {
-    const res = await fetch(`/api/admin/users/${u.id}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: new URLSearchParams({ verified: (!u.verified).toString() }) });
-    if (!res.ok) { const d = await res.json(); flash(d.error || 'Errore', 'error'); return; }
+    const body = new URLSearchParams({ verified: (!u.verified).toString() });
+    const res = await authFetch(`/api/admin/users/${u.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      flash(d.error || 'Errore', 'error');
+      return;
+    }
     flash(!u.verified ? 'Utente verificato!' : 'Verifica rimossa');
     loadAll();
   }
@@ -645,14 +670,27 @@ export default function Admin() {
     if (!file) return;
     const fd = new FormData();
     fd.append('avatar', file);
-    const res = await fetch(`/api/admin/users/${id}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: fd });
-    if (!res.ok) { const d = await res.json(); flash(d.error || 'Errore immagine', 'error'); return; }
+    const res = await authFetch(`/api/admin/users/${id}`, { method: 'PUT', body: fd });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      flash(d.error || 'Errore immagine', 'error');
+      return;
+    }
     flash('Immagine aggiornata!'); loadAll();
   }
 
   async function removeUserAvatar(id) {
-    const res = await fetch(`/api/admin/users/${id}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: new URLSearchParams({ removeImage: 'true' }) });
-    if (!res.ok) { const d = await res.json(); flash(d.error || 'Errore rimozione', 'error'); return; }
+    const body = new URLSearchParams({ removeImage: 'true' });
+    const res = await authFetch(`/api/admin/users/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      flash(d.error || 'Errore rimozione', 'error');
+      return;
+    }
     flash('Immagine rimossa!'); loadAll();
   }
 }
