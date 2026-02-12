@@ -30,6 +30,7 @@ export default function Login() {
         <div className="auth-header">
           <img src="/logo.png" alt="Zaccaro World Cup" className="auth-logo-img" />
           <p>Accedi al tuo account</p>
+          <p className="auth-hint">Solo con admin / admin puoi accedere alla Dashboard e gestire il sito.</p>
         </div>
         <form onSubmit={handleSubmit} className="auth-form">
           {error && <div className="alert alert-error">{error}</div>}

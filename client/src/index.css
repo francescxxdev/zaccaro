@@ -113,6 +113,11 @@ a:hover { color: var(--green-dark); }
   font-size: 14px;
   margin-top: 6px;
 }
+.auth-header .auth-hint {
+  font-size: 13px;
+  margin-top: 8px;
+  color: var(--gray-light);
+}
 
 .auth-form { display: flex; flex-direction: column; gap: 18px; }
 

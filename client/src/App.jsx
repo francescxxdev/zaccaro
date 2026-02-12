@@ -25,7 +25,7 @@ export default function App() {
           <Route path="/infortunati" element={<ProtectedRoute><Infortunati /></ProtectedRoute>} />
           <Route path="/profilo" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/register" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

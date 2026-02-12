@@ -35,6 +35,7 @@ export default function Register() {
         <div className="auth-header">
           <img src="/logo.png" alt="Zaccaro World Cup" className="auth-logo-img" />
           <p>Crea un nuovo account</p>
+          <p className="auth-hint">Registrati per accedere a classifica, news e giocatori.</p>
         </div>
         <form onSubmit={handleSubmit} className="auth-form">
           {error && <div className="alert alert-error">{error}</div>}
