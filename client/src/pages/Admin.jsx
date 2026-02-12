@@ -44,7 +44,7 @@ export default function Admin() {
   const [showAddInjury, setShowAddInjury] = useState(false);
 
   const [message, setMessage] = useState(null);
-  const { authFetch } = useAuth();
+  const { authFetch, imageUrl } = useAuth();
 
   const loadAll = () => {
     Promise.allSettled([
@@ -327,7 +327,7 @@ export default function Admin() {
                     <div key={p.id} className={`admin-player-card ${editingPlayerId === p.id ? 'editing' : ''}`}>
                       <div className="apc-left">
                         <div className="apc-avatar">
-                          {p.image ? <img src={p.image} alt={p.name} /> : <span>{p.name.split(' ').map(n => n[0]).join('')}</span>}
+                          {p.image ? <img src={imageUrl(p.image)} alt={p.name} /> : <span>{p.name.split(' ').map(n => n[0]).join('')}</span>}
                         </div>
                         <div className="apc-info">
                           <h3>{p.name}</h3>
@@ -367,7 +367,7 @@ export default function Admin() {
                     <div className="image-upload-area">
                       {(newsImagePreview || (!newsRemoveImage && newsExistingImage)) ? (
                         <div className="image-preview-box">
-                          <img src={newsImagePreview || newsExistingImage} alt="Preview" className="image-preview" />
+                          <img src={newsImagePreview || (newsExistingImage && (newsExistingImage.startsWith('blob:') || newsExistingImage.startsWith('http') ? newsExistingImage : imageUrl(newsExistingImage)))} alt="Preview" className="image-preview" />
                           <div className="image-preview-actions">
                             <label className="btn btn-sm btn-edit image-change-btn">Cambia immagine<input type="file" accept="image/*" onChange={handleNewsFileSelect} hidden /></label>
                             <button type="button" className="btn btn-sm btn-delete" onClick={() => { setNewsImageFile(null); setNewsImagePreview(null); setNewsExistingImage(null); setNewsRemoveImage(true); }}>Rimuovi</button>
@@ -426,7 +426,7 @@ export default function Admin() {
                 {news.map(n => (
                   <div key={n.id} className={`admin-news-card ${editingNewsId === n.id ? 'editing' : ''}`}>
                     <div className="anc-info">
-                      {n.image && <img src={n.image} alt={n.title} className="news-card-image" />}
+                      {n.image && <img src={imageUrl(n.image)} alt={n.title} className="news-card-image" />}
                       <h3>{n.title}</h3>
                       <p>{n.content.slice(0, 120)}{n.content.length > 120 ? '...' : ''}</p>
                       <span className="anc-meta">💬 {n.commentCount} commenti</span>
@@ -547,7 +547,7 @@ export default function Admin() {
                     >
                       <div className="auc-left">
                         <div className="auc-avatar">
-                          {u.avatar ? <img src={u.avatar} alt={u.username} /> : <span>{u.username.slice(0,2).toUpperCase()}</span>}
+                          {u.avatar ? <img src={imageUrl(u.avatar)} alt={u.username} /> : <span>{u.username.slice(0,2).toUpperCase()}</span>}
                         </div>
                         <div className="auc-info">
                           <h3>
@@ -608,7 +608,7 @@ export default function Admin() {
           <div className="image-upload-area">
             {currentPreview ? (
               <div className="image-preview-box">
-                <img src={currentPreview} alt="Preview" className="image-preview-round" />
+                <img src={currentPreview && (currentPreview.startsWith('blob:') || currentPreview.startsWith('http') ? currentPreview : imageUrl(currentPreview))} alt="Preview" className="image-preview-round" />
                 <div className="image-preview-actions">
                   <label className="btn btn-sm btn-edit image-change-btn">Cambia foto<input type="file" accept="image/*" onChange={handleFileSelect} hidden /></label>
                   <button type="button" className="btn btn-sm btn-delete" onClick={() => { setCroppedBlob(null); setCroppedPreview(null); setExistingImage(null); setRemoveImage(true); }}>Rimuovi</button>

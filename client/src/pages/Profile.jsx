@@ -1,17 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import ImageCropper from '../components/ImageCropper';
 
 export default function Profile() {
-  const { user, updateProfile, logout } = useAuth();
+  const { user, updateProfile, logout, imageUrl } = useAuth();
   const [username, setUsername] = useState(user?.username || '');
   const [cropSrc, setCropSrc] = useState(null);
   const [croppedBlob, setCroppedBlob] = useState(null);
-  const [preview, setPreview] = useState(user?.avatar || null);
+  const [preview, setPreview] = useState(null);
   const [removeImage, setRemoveImage] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
+
+  useEffect(() => {
+    if (!croppedBlob) {
+      setPreview(user?.avatar ? imageUrl(user.avatar) : null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.avatar]);
 
   const handleFileSelect = (e) => {
     const f = e.target.files[0];
@@ -37,7 +44,7 @@ export default function Profile() {
       const avatar = removeImage ? null : croppedBlob;
       const updated = await updateProfile(payload, avatar);
       setMessage({ text: 'Profilo aggiornato', type: 'success' });
-      setPreview(updated.avatar || null);
+      setPreview(updated.avatar ? imageUrl(updated.avatar) : null);
       setCroppedBlob(null);
     } catch (err) {
       setMessage({ text: err.message || 'Errore', type: 'error' });
@@ -75,7 +82,7 @@ export default function Profile() {
             <div className="image-upload-area">
               {preview && !removeImage ? (
                 <div className="image-preview-box">
-                  <img src={preview} alt="Avatar" className="image-preview-round" />
+                  <img src={preview && (preview.startsWith('blob:') || preview.startsWith('http') ? preview : imageUrl(preview))} alt="Avatar" className="image-preview-round" />
                   <div className="image-preview-actions">
                     <label className="btn btn-sm btn-edit image-change-btn">Cambia<input type="file" accept="image/*" onChange={handleFileSelect} hidden /></label>
                     <button type="button" className="btn btn-sm btn-delete" onClick={() => { setCroppedBlob(null); setPreview(null); setRemoveImage(true); }}>Rimuovi</button>

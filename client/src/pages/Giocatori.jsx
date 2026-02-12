@@ -7,7 +7,7 @@ export default function Giocatori() {
   const [players, setPlayers] = useState([]);
   const [ranking, setRanking] = useState({});
   const [loading, setLoading] = useState(true);
-  const { authFetch } = useAuth();
+  const { authFetch, imageUrl } = useAuth();
 
   useEffect(() => {
     authFetch('/api/players')
@@ -51,7 +51,7 @@ export default function Giocatori() {
                 <div className="player-card-top">
                   <div className="player-card-avatar">
                     {p.image ? (
-                      <img src={p.image} alt={p.name} className="player-card-img" />
+                      <img src={imageUrl(p.image)} alt={p.name} className="player-card-img" />
                     ) : (
                       <span className="avatar-text">{p.name.split(' ').map(n => n[0]).join('')}</span>
                     )}

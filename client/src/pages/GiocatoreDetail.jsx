@@ -7,7 +7,7 @@ export default function GiocatoreDetail() {
   const { id } = useParams();
   const [player, setPlayer] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { authFetch } = useAuth();
+  const { authFetch, imageUrl } = useAuth();
 
   useEffect(() => {
     authFetch(`/api/players/${id}`)
@@ -51,7 +51,7 @@ export default function GiocatoreDetail() {
           <div className="player-detail-header">
             <div className="player-detail-avatar">
               {player.image ? (
-                <img src={player.image} alt={player.name} className="player-detail-img" />
+                <img src={imageUrl(player.image)} alt={player.name} className="player-detail-img" />
               ) : (
                 <span className="avatar-text-lg">{player.name.split(' ').map(n => n[0]).join('')}</span>
               )}

@@ -114,8 +114,16 @@ export function AuthProvider({ children }) {
     return data.user;
   };
 
+  /** Restituisce l'URL completo per un path immagine dal backend (avatar, uploads, ecc.) */
+  const imageUrl = (path) => {
+    if (!path) return '';
+    if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('blob:')) return path;
+    const base = API_BASE.replace(/\/$/, '');
+    return base + (path.startsWith('/') ? path : '/' + path);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, authFetch, updateProfile }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, authFetch, updateProfile, imageUrl }}>
       {children}
     </AuthContext.Provider>
   );

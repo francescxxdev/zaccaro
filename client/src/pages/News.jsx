@@ -7,7 +7,7 @@ export default function News() {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
   const [commentText, setCommentText] = useState({});
-  const { authFetch, user } = useAuth();
+  const { authFetch, user, imageUrl } = useAuth();
   const [editOpen, setEditOpen] = useState({});
   const [editText, setEditText] = useState({});
   const [avatarErr, setAvatarErr] = useState({});
@@ -142,7 +142,7 @@ export default function News() {
                 <div className="news-post-body">
                   {n.image && (
                     <div className="news-post-image-wrap">
-                      <img src={n.image} alt={n.title} className="news-post-image" />
+                      <img src={imageUrl(n.image)} alt={n.title} className="news-post-image" />
                     </div>
                   )}
                   <h2>
@@ -167,7 +167,7 @@ export default function News() {
                           <div key={c.id} className="comment">
                             <div className="comment-avatar">
                               {(() => {
-                                const src = c.avatar ? (c.avatar.startsWith('/') ? c.avatar : `/${c.avatar}`) : '';
+                                const src = c.avatar ? imageUrl(c.avatar) : '';
                                 return (src && !avatarErr[c.id])
                                   ? <img src={src} alt={c.username} onError={() => setAvatarErr((p) => ({ ...p, [c.id]: true }))} />
                                   : c.username.slice(0, 2).toUpperCase();
@@ -209,7 +209,7 @@ export default function News() {
                     <div className="comment-form">
                       <div className="comment-form-avatar">
                         {(() => {
-                          const src = user?.avatar ? (user.avatar.startsWith('/') ? user.avatar : `/${user.avatar}`) : '';
+                          const src = user?.avatar ? imageUrl(user.avatar) : '';
                           return (src && !formAvatarErr)
                             ? <img src={src} alt={user?.username} onError={() => setFormAvatarErr(true)} />
                             : user?.username?.slice(0, 2).toUpperCase();
