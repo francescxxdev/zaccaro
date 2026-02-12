@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node server.js",
     "seed": "node scripts/seed.js",
-    "dev": "concurrently \"node server.js\" \"npm run dev --prefix client\"",
+    "dev": "concurrently \"PORT=3080 node server.js\" \"npm run dev --prefix client\"",
     "build": "npm install --prefix client --include=dev && npm run build --prefix client"
   },
   "dependencies": {

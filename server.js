@@ -87,8 +87,8 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now'))
   );
   CREATE TABLE IF NOT EXISTS next_match (
-    id INTEGER PRIMARY KEY CHECK (id = 1),
-    match_date TEXT DEFAULT '',
+    id INTEGER PRIMARY KEY,
+    match_date TEXT DEFAULT '17/02/2026',
     team1_name TEXT DEFAULT '',
     team2_name TEXT DEFAULT '',
     team1_score INTEGER DEFAULT NULL,
@@ -100,9 +100,13 @@ db.exec(`
     team2_formation TEXT DEFAULT ''
   );
 `);
+try {
+  const hasRow = db.prepare("SELECT 1 FROM next_match WHERE id = 1").get();
+  if (!hasRow) db.prepare("INSERT INTO next_match (id, match_date) VALUES (1, '17/02/2026')").run();
+} catch (e) { console.error("next_match init:", e); }
 
-try { db.exec("INSERT OR IGNORE INTO next_match (id, match_date) VALUES (1, '17/02/2026')"); } catch {}
-
+try { db.exec("ALTER TABLE next_match ADD COLUMN team1_lineup TEXT DEFAULT '[]'"); } catch {}
+try { db.exec("ALTER TABLE next_match ADD COLUMN team2_lineup TEXT DEFAULT '[]'"); } catch {}
 try { db.exec("ALTER TABLE players ADD COLUMN image TEXT DEFAULT ''"); } catch {}
 try { db.exec("ALTER TABLE news ADD COLUMN image TEXT DEFAULT ''"); } catch {}
 try { db.exec("ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT ''"); } catch {}
@@ -177,6 +181,8 @@ app.use((req, res, next) => {
   next();
 });
 app.use("/uploads", express.static(uploadsDir));
+
+app.get("/api/health", (req, res) => res.json({ ok: true }));
 
 function generateToken(user) {
   return jwt.sign(
@@ -363,50 +369,71 @@ app.get("/api/news/:id", authMiddleware, (req, res) => {
   res.json({ ...n, comments });
 });
 
-// NEXT MATCH (pubblico per lettura)
+// Helper: parse lineup JSON (7 slot: { playerId, playerName, vote, mvp })
+function parseLineup(str) {
+  if (!str) return Array(7).fill(null).map(() => ({ playerId: null, playerName: "", vote: "", mvp: false }));
+  try {
+    const arr = JSON.parse(str);
+    const out = Array(7).fill(null).map((_, i) => ({
+      playerId: arr[i]?.playerId ?? null,
+      playerName: arr[i]?.playerName ?? "",
+      vote: arr[i]?.vote ?? "",
+      mvp: !!(arr[i]?.mvp),
+    }));
+    return out;
+  } catch {
+    return Array(7).fill(null).map(() => ({ playerId: null, playerName: "", vote: "", mvp: false }));
+  }
+}
+
+// NEXT MATCH: dati letti in Home (formazioni dinamiche). La partita non viene mai eliminata, solo aggiornata.
 app.get("/api/next-match", authMiddleware, (req, res) => {
   const row = db.prepare("SELECT * FROM next_match WHERE id = 1").get();
-  if (!row) return res.json({ match_date: "17/02/2026", team1_name: "", team2_name: "", team1_score: null, team2_score: null, team1_rating: "", team2_rating: "", mvp_name: "", team1_formation: "", team2_formation: "" });
+  if (!row) {
+    return res.json({
+      match_date: "17/02/2026",
+      team1_score: null,
+      team2_score: null,
+      team1_lineup: parseLineup(null),
+      team2_lineup: parseLineup(null),
+    });
+  }
   res.json({
     match_date: row.match_date || "17/02/2026",
-    team1_name: row.team1_name || "",
-    team2_name: row.team2_name || "",
     team1_score: row.team1_score,
     team2_score: row.team2_score,
-    team1_rating: row.team1_rating || "",
-    team2_rating: row.team2_rating || "",
-    mvp_name: row.mvp_name || "",
-    team1_formation: row.team1_formation || "",
-    team2_formation: row.team2_formation || "",
+    team1_lineup: parseLineup(row.team1_lineup),
+    team2_lineup: parseLineup(row.team2_lineup),
   });
 });
 
-app.put("/api/admin/next-match", authMiddleware, adminMiddleware, (req, res) => {
-  const { match_date, team1_name, team2_name, team1_score, team2_score, team1_rating, team2_rating, mvp_name, team1_formation, team2_formation } = req.body;
+// Salva/aggiorna prossimo match. Non si elimina mai la partita: solo INSERT (prima volta) o UPDATE.
+// Gestore usato sia per PUT che per POST (alcuni proxy/ambienti possono bloccare PUT).
+function saveNextMatchHandler(req, res) {
+  const { match_date, team1_score, team2_score, team1_lineup, team2_lineup } = req.body || {};
+  const t1 = Array.isArray(team1_lineup) ? JSON.stringify(team1_lineup.slice(0, 7)) : (team1_lineup || "[]");
+  const t2 = Array.isArray(team2_lineup) ? JSON.stringify(team2_lineup.slice(0, 7)) : (team2_lineup || "[]");
   const existing = db.prepare("SELECT id FROM next_match WHERE id = 1").get();
   if (!existing) {
-    db.prepare("INSERT INTO next_match (id, match_date, team1_name, team2_name, team1_score, team2_score, team1_rating, team2_rating, mvp_name, team1_formation, team2_formation) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
-      match_date || "17/02/2026", team1_name || "", team2_name || "", team1_score === "" ? null : parseInt(team1_score), team2_score === "" ? null : parseInt(team2_score), team1_rating || "", team2_rating || "", mvp_name || "", team1_formation || "", team2_formation || ""
+    db.prepare("INSERT INTO next_match (id, match_date, team1_score, team2_score, team1_lineup, team2_lineup) VALUES (1, ?, ?, ?, ?, ?)").run(
+      match_date || "17/02/2026", team1_score === "" || team1_score == null ? null : parseInt(team1_score), team2_score === "" || team2_score == null ? null : parseInt(team2_score), t1, t2
     );
   } else {
-    db.prepare("UPDATE next_match SET match_date=?, team1_name=?, team2_name=?, team1_score=?, team2_score=?, team1_rating=?, team2_rating=?, mvp_name=?, team1_formation=?, team2_formation=? WHERE id=1").run(
-      match_date || "17/02/2026", team1_name || "", team2_name || "", team1_score === "" ? null : parseInt(team1_score), team2_score === "" ? null : parseInt(team2_score), team1_rating || "", team2_rating || "", mvp_name || "", team1_formation || "", team2_formation || ""
+    db.prepare("UPDATE next_match SET match_date=?, team1_score=?, team2_score=?, team1_lineup=?, team2_lineup=? WHERE id=1").run(
+      match_date || "17/02/2026", team1_score === "" || team1_score == null ? null : parseInt(team1_score), team2_score === "" || team2_score == null ? null : parseInt(team2_score), t1, t2
     );
   }
   const row = db.prepare("SELECT * FROM next_match WHERE id = 1").get();
   res.json({
     match_date: row.match_date || "17/02/2026",
-    team1_name: row.team1_name || "",
-    team2_name: row.team2_name || "",
     team1_score: row.team1_score,
     team2_score: row.team2_score,
-    team1_rating: row.team1_rating || "",
-    team2_rating: row.team2_rating || "",
-    mvp_name: row.mvp_name || "",
-    team1_formation: row.team1_formation || "",
-    team2_formation: row.team2_formation || "",
+    team1_lineup: parseLineup(row.team1_lineup),
+    team2_lineup: parseLineup(row.team2_lineup),
   });
-});
+}
+app.put("/api/admin/next-match", authMiddleware, adminMiddleware, saveNextMatchHandler);
+app.post("/api/admin/next-match", authMiddleware, adminMiddleware, saveNextMatchHandler);
 
 // Admin users
 app.get("/api/admin/users", authMiddleware, adminMiddleware, (req, res) => {

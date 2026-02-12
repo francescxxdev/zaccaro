@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 
@@ -8,16 +8,54 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { authFetch } = useAuth();
+  const location = useLocation();
   const [news, setNews] = useState([]);
   const [loadingNews, setLoadingNews] = useState(true);
-  const [nextMatch, setNextMatch] = useState(null);
+  const defaultNextMatch = {
+    match_date: '17/02/2026',
+    team1_score: null,
+    team2_score: null,
+    team1_lineup: Array(7).fill(null).map(() => ({ playerId: null, playerName: '', vote: '', mvp: false })),
+    team2_lineup: Array(7).fill(null).map(() => ({ playerId: null, playerName: '', vote: '', mvp: false })),
+  };
+  const [nextMatch, setNextMatch] = useState(defaultNextMatch);
+
+  const fetchNextMatch = useCallback(() => {
+    authFetch('/api/next-match', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data || typeof data !== 'object') return;
+        const t1 = (data.team1_lineup || []).slice(0, 7);
+        const t2 = (data.team2_lineup || []).slice(0, 7);
+        while (t1.length < 7) t1.push({ playerId: null, playerName: '', vote: '', mvp: false });
+        while (t2.length < 7) t2.push({ playerId: null, playerName: '', vote: '', mvp: false });
+        setNextMatch({
+          match_date: data.match_date || '17/02/2026',
+          team1_score: data.team1_score,
+          team2_score: data.team2_score,
+          team1_lineup: t1,
+          team2_lineup: t2,
+        });
+      })
+      .catch(() => {});
+  }, [authFetch]);
+
+  useEffect(() => { fetchNextMatch(); }, [fetchNextMatch]);
 
   useEffect(() => {
-    authFetch('/api/next-match')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => setNextMatch(data))
-      .catch(() => setNextMatch(null));
-  }, []);
+    if (location.pathname === '/') fetchNextMatch();
+  }, [location.pathname, fetchNextMatch]);
+
+  useEffect(() => {
+    const onFocus = () => fetchNextMatch();
+    window.addEventListener('focus', onFocus);
+    const onVisibility = () => { if (document.visibilityState === 'visible') fetchNextMatch(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [fetchNextMatch]);
 
   useEffect(() => {
     setError(null);
@@ -79,44 +117,58 @@ export default function Home() {
             </Link>
           )}
 
-          {/* Riquadro Prossimo match: sotto news, sopra classifica */}
-          {nextMatch && (
-            <div className="next-match-box">
-              <h3 className="next-match-title">Prossimo match</h3>
-              {(!nextMatch.team1_name && !nextMatch.team2_name) ? (
-                <p className="next-match-date-only">{nextMatch.match_date || '17/02/2026'}</p>
-              ) : (
+          {/* Riquadro Matchday: titolo Matchday, sotto data; sinistra Squadra 1, destra Squadra 2 (voti aggiungibili dopo) */}
+          <div className="next-match-box matchday-box">
+            <h3 className="next-match-title">Matchday</h3>
+            <p className="next-match-date-only">{nextMatch.match_date || '—'}</p>
+            {(() => {
+              const hasResult = nextMatch.team1_score != null && nextMatch.team2_score != null;
+              const hasPlayers = nextMatch.team1_lineup?.some(s => s.playerName) || nextMatch.team2_lineup?.some(s => s.playerName);
+              const mvpSlot = [...(nextMatch.team1_lineup || []), ...(nextMatch.team2_lineup || [])].find(s => s.mvp);
+              return (
                 <>
-                  <div className="next-match-content">
-                    <div className="next-match-team next-match-team-left">
-                      <span className="next-match-formation">{nextMatch.team1_formation || '—'}</span>
-                      <span className="next-match-name">{nextMatch.team1_name}</span>
-                      {(nextMatch.team1_rating !== '' && nextMatch.team1_rating != null) && (
-                        <span className="next-match-rating">{nextMatch.team1_rating}</span>
-                      )}
+                  {hasResult && (
+                    <div className="next-match-result-wrap">
+                      <p className="next-match-result-home">
+                        {nextMatch.team1_score} — {nextMatch.team2_score}
+                      </p>
                     </div>
-                    <div className="next-match-vs">
-                      <span className="next-match-score">
-                        {nextMatch.team1_score != null && nextMatch.team2_score != null
-                          ? `${nextMatch.team1_score} - ${nextMatch.team2_score}`
-                          : 'VS'}
-                      </span>
+                  )}
+                  {hasPlayers && (
+                    <div className="next-match-lineups-home">
+                      <div className="next-match-col-home">
+                        <p className="next-match-col-label">Squadra 1</p>
+                        {(nextMatch.team1_lineup || []).map((slot, i) => (
+                          slot.playerName ? (
+                            <div key={`t1-${i}`} className={`next-match-row-home ${slot.mvp ? 'is-mvp' : ''}`}>
+                              <span className="next-match-name-home">{slot.playerName}</span>
+                              {slot.vote && <span className="next-match-vote-home">{slot.vote}</span>}
+                              {slot.mvp && <span className="next-match-mvp-badge">MVP</span>}
+                            </div>
+                          ) : null
+                        ))}
+                      </div>
+                      <div className="next-match-col-home">
+                        <p className="next-match-col-label">Squadra 2</p>
+                        {(nextMatch.team2_lineup || []).map((slot, i) => (
+                          slot.playerName ? (
+                            <div key={`t2-${i}`} className={`next-match-row-home ${slot.mvp ? 'is-mvp' : ''}`}>
+                              <span className="next-match-name-home">{slot.playerName}</span>
+                              {slot.vote && <span className="next-match-vote-home">{slot.vote}</span>}
+                              {slot.mvp && <span className="next-match-mvp-badge">MVP</span>}
+                            </div>
+                          ) : null
+                        ))}
+                      </div>
                     </div>
-                    <div className="next-match-team next-match-team-right">
-                      <span className="next-match-formation">{nextMatch.team2_formation || '—'}</span>
-                      <span className="next-match-name">{nextMatch.team2_name}</span>
-                      {(nextMatch.team2_rating !== '' && nextMatch.team2_rating != null) && (
-                        <span className="next-match-rating">{nextMatch.team2_rating}</span>
-                      )}
-                    </div>
-                  </div>
-                  {nextMatch.mvp_name && (
-                    <p className="next-match-mvp">⭐ MVP: <span className="next-match-mvp-name">{nextMatch.mvp_name}</span></p>
+                  )}
+                  {mvpSlot && (
+                    <p className="next-match-mvp">⭐ MVP: <span className="next-match-mvp-name">{mvpSlot.playerName}</span></p>
                   )}
                 </>
-              )}
-            </div>
-          )}
+              );
+            })()}
+          </div>
 
           <div className="page-header">
             <h1>

@@ -457,6 +457,198 @@ a:hover { color: var(--green-dark); }
   font-weight: 800;
 }
 
+/* Home: risultato in alto, due colonne Squadra 1 / Squadra 2 con voti e MVP */
+.next-match-result-wrap {
+  margin-bottom: 16px;
+  padding: 10px 16px;
+  background: rgba(34, 197, 94, 0.12);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+.next-match-result-home {
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--green);
+  margin: 0;
+}
+.next-match-lineups-home {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 12px;
+  text-align: left;
+}
+.next-match-col-label {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gray);
+  margin: 0 0 8px 0;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--gray-dark);
+}
+.next-match-col-home {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.next-match-row-home {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--gray-dark);
+}
+.next-match-row-home.is-mvp {
+  background: rgba(251, 191, 36, 0.08);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  margin: 0 -10px;
+  border-bottom-color: transparent;
+}
+.next-match-name-home {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--white);
+}
+.next-match-vote-home {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--green);
+  margin-left: auto;
+}
+.next-match-mvp-badge {
+  font-size: 10px;
+  font-weight: 800;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Admin: Prossimo match due colonne */
+.next-match-admin .next-match-result-row {
+  margin-bottom: 20px;
+}
+.next-match-result-row label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.next-match-result-inputs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.next-match-score-in {
+  width: 64px;
+  text-align: center;
+  padding: 10px 12px;
+  font-size: 18px;
+  font-weight: 800;
+  background: var(--black-light);
+  border: 1px solid var(--gray-dark);
+  border-radius: var(--radius-sm);
+  color: var(--white);
+}
+.next-match-result-sep {
+  color: var(--gray);
+  font-weight: 700;
+}
+.next-match-lineups {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 16px;
+}
+.next-match-col-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gray-light);
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--gray-dark);
+}
+.next-match-slot {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.next-match-player-select {
+  min-width: 0;
+  padding: 8px 10px;
+  font-size: 13px;
+  background: var(--black-light);
+  border: 1px solid var(--gray-dark);
+  border-radius: var(--radius-sm);
+  color: var(--white);
+}
+.next-match-vote-select {
+  width: 56px;
+  padding: 8px 4px;
+  font-size: 13px;
+  text-align: center;
+  background: var(--black-light);
+  border: 1px solid var(--gray-dark);
+  border-radius: var(--radius-sm);
+  color: var(--green);
+  font-weight: 700;
+}
+.next-match-mvp-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--gray);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.next-match-mvp-wrap input { cursor: pointer; }
+
+/* Admin: Partita salvata (casella che esce dopo il salvataggio) */
+.saved-match-card {
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+.saved-match-title {
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--green);
+  margin: 0 0 8px 0;
+}
+.saved-match-date { font-size: 15px; font-weight: 700; color: var(--white); margin: 0 0 6px 0; }
+.saved-match-result { font-size: 18px; font-weight: 900; color: var(--green); margin: 0 0 12px 0; }
+.saved-match-teams {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 12px;
+}
+.saved-match-col-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--gray);
+  margin-bottom: 6px;
+}
+.saved-match-col ul { margin: 0; padding-left: 18px; font-size: 13px; color: var(--gray-light); }
+.saved-match-col li { margin-bottom: 2px; }
+.saved-match-mvp { font-size: 12px; color: #fbbf24; margin: 0 0 10px 0; }
+.saved-match-card .btn { margin-top: 4px; }
+
 /* Admin Users */
 .admin-users-list { display: flex; flex-direction: column; gap: 10px; }
 .admin-user-card {
@@ -1704,6 +1896,16 @@ a:hover { color: var(--green-dark); }
   .next-match-mvp {
     font-size: 13px;
     margin-top: 10px;
+  }
+  .next-match-lineups-home {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .next-match-lineups {
+    grid-template-columns: 1fr;
+  }
+  .next-match-slot {
+    grid-template-columns: 1fr auto auto;
   }
 
   .page-header h1 {
