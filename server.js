@@ -96,6 +96,27 @@ try { db.exec("ALTER TABLE comments ADD COLUMN avatar TEXT DEFAULT ''"); } catch
 try { db.exec("ALTER TABLE comments ADD COLUMN parent_id INTEGER"); } catch {}
 try { db.exec("ALTER TABLE comments ADD COLUMN deleted INTEGER DEFAULT 0"); } catch {}
 
+// Ensure a default admin account exists and is the only admin
+try {
+  const ADMIN_USERNAME = "admin";
+  const ADMIN_PASSWORD = "admin";
+
+  // Make sure only the admin user has is_admin = 1
+  db.prepare("UPDATE users SET is_admin = CASE WHEN username = ? THEN 1 ELSE 0 END").run(ADMIN_USERNAME);
+
+  // Create admin user if missing
+  const admin = db.prepare("SELECT id FROM users WHERE username = ?").get(ADMIN_USERNAME);
+  if (!admin) {
+    const hashed = bcrypt.hashSync(ADMIN_PASSWORD, 10);
+    db.prepare("INSERT INTO users (username, password, is_admin) VALUES (?, ?, 1)").run(ADMIN_USERNAME, hashed);
+    console.log("Default admin user created: admin / admin");
+  } else {
+    console.log("Default admin user ensured as only admin");
+  }
+} catch (e) {
+  console.error("Errore durante la verifica/creazione dell'admin di default:", e);
+}
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => {
