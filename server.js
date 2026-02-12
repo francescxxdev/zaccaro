@@ -86,7 +86,22 @@ db.exec(`
     status TEXT DEFAULT 'Infortunato',
     created_at TEXT DEFAULT (datetime('now'))
   );
+  CREATE TABLE IF NOT EXISTS next_match (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    match_date TEXT DEFAULT '',
+    team1_name TEXT DEFAULT '',
+    team2_name TEXT DEFAULT '',
+    team1_score INTEGER DEFAULT NULL,
+    team2_score INTEGER DEFAULT NULL,
+    team1_rating TEXT DEFAULT '',
+    team2_rating TEXT DEFAULT '',
+    mvp_name TEXT DEFAULT '',
+    team1_formation TEXT DEFAULT '',
+    team2_formation TEXT DEFAULT ''
+  );
 `);
+
+try { db.exec("INSERT OR IGNORE INTO next_match (id, match_date) VALUES (1, '17/02/2026')"); } catch {}
 
 try { db.exec("ALTER TABLE players ADD COLUMN image TEXT DEFAULT ''"); } catch {}
 try { db.exec("ALTER TABLE news ADD COLUMN image TEXT DEFAULT ''"); } catch {}
@@ -115,6 +130,40 @@ try {
   }
 } catch (e) {
   console.error("Errore durante la verifica/creazione dell'admin di default:", e);
+}
+
+// Auto-seed: se il database è vuoto (nessun giocatore/news), inserisci dati iniziali
+try {
+  const playerCount = db.prepare("SELECT COUNT(*) as count FROM players").get().count;
+  if (playerCount === 0) {
+    const players = [
+      { name: "Giacinto Lesce", goals: 5, matches: 8, height: "178 cm", position: "Centrocampista", description: "Giocatore tecnico con grande visione di gioco.", number: 7 },
+      { name: "Francesco Russo", goals: 4, matches: 10, height: "182 cm", position: "Attaccante", description: "Leader con ottime capacità di finalizzazione.", number: 9 },
+      { name: "Giuseppe Papasso", goals: 6, matches: 9, height: "175 cm", position: "Attaccante", description: "Puro goleador, sempre pericoloso in area.", number: 22 },
+      { name: "Luca Argentano", goals: 8, matches: 7, height: "180 cm", position: "Attaccante", description: "Veloce e scattante, pericoloso in contropiede.", number: 14 },
+      { name: "Gabriele Guerrieri", goals: 2, matches: 8, height: "177 cm", position: "Centrocampista", description: "Centrocampista di sostegno.", number: 8 },
+      { name: "Antonio Graniti", goals: 0, matches: 5, height: "185 cm", position: "Difensore", description: "Difensore centrale solido.", number: 31 },
+    ];
+    const stmt = db.prepare(
+      "INSERT INTO players (name, goals, matches, height, position, description, number) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    );
+    for (const p of players) stmt.run(p.name, p.goals, p.matches, p.height, p.position, p.description, p.number);
+    console.log("Dati iniziali: giocatori inseriti");
+  }
+  const newsCount = db.prepare("SELECT COUNT(*) as count FROM news").get().count;
+  if (newsCount === 0) {
+    db.prepare("INSERT INTO news (title, content) VALUES (?, ?)").run(
+      "Benvenuti in Zaccaro's World Cup",
+      "La stagione è iniziata! Segui classifica marcatori, giocatori e aggiornamenti qui."
+    );
+    db.prepare("INSERT INTO news (title, content) VALUES (?, ?)").run(
+      "Primo turno disputato",
+      "Tutte le squadre sono scese in campo. Resta aggiornato su risultati e protagonisti."
+    );
+    console.log("Dati iniziali: news inserite");
+  }
+} catch (e) {
+  console.error("Errore auto-seed:", e);
 }
 
 app.use(express.json());
@@ -312,6 +361,51 @@ app.get("/api/news/:id", authMiddleware, (req, res) => {
     ORDER BY c.created_at ASC
   `).all(n.id);
   res.json({ ...n, comments });
+});
+
+// NEXT MATCH (pubblico per lettura)
+app.get("/api/next-match", authMiddleware, (req, res) => {
+  const row = db.prepare("SELECT * FROM next_match WHERE id = 1").get();
+  if (!row) return res.json({ match_date: "17/02/2026", team1_name: "", team2_name: "", team1_score: null, team2_score: null, team1_rating: "", team2_rating: "", mvp_name: "", team1_formation: "", team2_formation: "" });
+  res.json({
+    match_date: row.match_date || "17/02/2026",
+    team1_name: row.team1_name || "",
+    team2_name: row.team2_name || "",
+    team1_score: row.team1_score,
+    team2_score: row.team2_score,
+    team1_rating: row.team1_rating || "",
+    team2_rating: row.team2_rating || "",
+    mvp_name: row.mvp_name || "",
+    team1_formation: row.team1_formation || "",
+    team2_formation: row.team2_formation || "",
+  });
+});
+
+app.put("/api/admin/next-match", authMiddleware, adminMiddleware, (req, res) => {
+  const { match_date, team1_name, team2_name, team1_score, team2_score, team1_rating, team2_rating, mvp_name, team1_formation, team2_formation } = req.body;
+  const existing = db.prepare("SELECT id FROM next_match WHERE id = 1").get();
+  if (!existing) {
+    db.prepare("INSERT INTO next_match (id, match_date, team1_name, team2_name, team1_score, team2_score, team1_rating, team2_rating, mvp_name, team1_formation, team2_formation) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+      match_date || "17/02/2026", team1_name || "", team2_name || "", team1_score === "" ? null : parseInt(team1_score), team2_score === "" ? null : parseInt(team2_score), team1_rating || "", team2_rating || "", mvp_name || "", team1_formation || "", team2_formation || ""
+    );
+  } else {
+    db.prepare("UPDATE next_match SET match_date=?, team1_name=?, team2_name=?, team1_score=?, team2_score=?, team1_rating=?, team2_rating=?, mvp_name=?, team1_formation=?, team2_formation=? WHERE id=1").run(
+      match_date || "17/02/2026", team1_name || "", team2_name || "", team1_score === "" ? null : parseInt(team1_score), team2_score === "" ? null : parseInt(team2_score), team1_rating || "", team2_rating || "", mvp_name || "", team1_formation || "", team2_formation || ""
+    );
+  }
+  const row = db.prepare("SELECT * FROM next_match WHERE id = 1").get();
+  res.json({
+    match_date: row.match_date || "17/02/2026",
+    team1_name: row.team1_name || "",
+    team2_name: row.team2_name || "",
+    team1_score: row.team1_score,
+    team2_score: row.team2_score,
+    team1_rating: row.team1_rating || "",
+    team2_rating: row.team2_rating || "",
+    mvp_name: row.mvp_name || "",
+    team1_formation: row.team1_formation || "",
+    team2_formation: row.team2_formation || "",
+  });
 });
 
 // Admin users

@@ -6,6 +6,7 @@ import ImageCropper from '../components/ImageCropper';
 const emptyPlayer = { name: '', goals: 0, matches: 0, height: '', position: '', description: '', number: 0 };
 const emptyNews = { title: '', content: '' };
 const emptyInjury = { player_name: '', injury: '', expected_return: '', status: 'Infortunato' };
+const emptyNextMatch = { match_date: '17/02/2026', team1_name: '', team2_name: '', team1_score: '', team2_score: '', team1_rating: '', team2_rating: '', mvp_name: '', team1_formation: '', team2_formation: '' };
 
 export default function Admin() {
   const [tab, setTab] = useState('players');
@@ -13,6 +14,7 @@ export default function Admin() {
   const [news, setNews] = useState([]);
   const [injuries, setInjuries] = useState([]);
   const [users, setUsers] = useState([]);
+  const [nextMatch, setNextMatch] = useState({ ...emptyNextMatch });
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [usersFilter, setUsersFilter] = useState('unverified');
   const [usersError, setUsersError] = useState(null);
@@ -51,6 +53,7 @@ export default function Admin() {
       authFetch('/api/players').then(r => r.json()),
       authFetch('/api/news').then(r => r.json()),
       authFetch('/api/injuries').then(r => r.json()),
+      authFetch('/api/next-match').then(r => (r.ok ? r.json() : { ...emptyNextMatch })),
       authFetch('/api/admin/users').then(async (r) => {
         if (!r.ok) {
           try {
@@ -76,10 +79,11 @@ export default function Admin() {
       }),
     ])
       .then((results) => {
-        const [p, n, i, u] = results;
+        const [p, n, i, nm, u] = results;
         if (p.status === 'fulfilled') setPlayers(p.value);
         if (n.status === 'fulfilled') setNews(n.value);
         if (i.status === 'fulfilled') setInjuries(i.value);
+        if (nm.status === 'fulfilled' && nm.value && typeof nm.value === 'object') setNextMatch({ ...emptyNextMatch, ...nm.value, team1_score: nm.value.team1_score ?? '', team2_score: nm.value.team2_score ?? '' });
         if (u.status === 'fulfilled' && Array.isArray(u.value)) setUsers(u.value);
         setLoading(false);
       })
@@ -256,6 +260,20 @@ export default function Admin() {
     flash('Infortunio eliminato!'); if (editingInjuryId === id) resetInjury(); loadAll();
   };
 
+  const handleNextMatchChange = (e) => {
+    const { name, value } = e.target;
+    setNextMatch(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveNextMatch = async (e) => {
+    e.preventDefault();
+    const res = await authFetch('/api/admin/next-match', { method: 'PUT', body: JSON.stringify(nextMatch) });
+    if (!res.ok) { const d = await res.json(); flash(d.error || 'Errore salvataggio', 'error'); return; }
+    const data = await res.json();
+    setNextMatch({ ...emptyNextMatch, ...data, team1_score: data.team1_score ?? '', team2_score: data.team2_score ?? '' });
+    flash('Prossimo match aggiornato!');
+  };
+
   const currentPreview = croppedPreview || (!removeImage ? existingImage : null);
 
   return (
@@ -283,6 +301,9 @@ export default function Admin() {
           </button>
           <button className={`admin-tab ${tab === 'users' ? 'active' : ''}`} onClick={() => setTab('users')}>
             ✅ Utenti verificati ({users.filter(u => u.verified).length})
+          </button>
+          <button className={`admin-tab ${tab === 'match' ? 'active' : ''}`} onClick={() => setTab('match')}>
+            ⚽ Prossimo match
           </button>
         </div>
 
@@ -507,6 +528,67 @@ export default function Admin() {
               </div>
             </div>
           </>
+        )}
+
+        {/* ============ PROSSIMO MATCH TAB ============ */}
+        {tab === 'match' && (
+          <div className="admin-section">
+            <h2>Prossimo match</h2>
+            <p className="admin-hint">Imposta la data e, se la partita è già stata giocata, compila formazioni, risultati, votazioni e MVP. In home verrà mostrato il riquadro sopra la classifica.</p>
+            <form onSubmit={handleSaveNextMatch} className="admin-form next-match-form">
+              <div className="form-group">
+                <label>Data partita (es. 17/02/2026) *</label>
+                <input name="match_date" value={nextMatch.match_date} onChange={handleNextMatchChange} placeholder="17/02/2026" required />
+              </div>
+              <div className="form-grid form-grid-2">
+                <div className="form-group">
+                  <label>Squadra / Formazione 1</label>
+                  <input name="team1_name" value={nextMatch.team1_name} onChange={handleNextMatchChange} placeholder="Nome squadra o formazione" />
+                </div>
+                <div className="form-group">
+                  <label>Squadra / Formazione 2</label>
+                  <input name="team2_name" value={nextMatch.team2_name} onChange={handleNextMatchChange} placeholder="Nome squadra o formazione" />
+                </div>
+              </div>
+              <div className="form-grid form-grid-2">
+                <div className="form-group">
+                  <label>Formazione 1 (es. 4-3-3)</label>
+                  <input name="team1_formation" value={nextMatch.team1_formation} onChange={handleNextMatchChange} placeholder="4-3-3" />
+                </div>
+                <div className="form-group">
+                  <label>Formazione 2 (es. 4-3-3)</label>
+                  <input name="team2_formation" value={nextMatch.team2_formation} onChange={handleNextMatchChange} placeholder="4-3-3" />
+                </div>
+              </div>
+              <div className="form-grid form-grid-2">
+                <div className="form-group">
+                  <label>Risultato Squadra 1 (goal)</label>
+                  <input type="number" min="0" name="team1_score" value={nextMatch.team1_score} onChange={handleNextMatchChange} placeholder="-" />
+                </div>
+                <div className="form-group">
+                  <label>Risultato Squadra 2 (goal)</label>
+                  <input type="number" min="0" name="team2_score" value={nextMatch.team2_score} onChange={handleNextMatchChange} placeholder="-" />
+                </div>
+              </div>
+              <div className="form-grid form-grid-2">
+                <div className="form-group">
+                  <label>Votazione Squadra 1 (numero verde)</label>
+                  <input name="team1_rating" value={nextMatch.team1_rating} onChange={handleNextMatchChange} placeholder="es. 7.5" />
+                </div>
+                <div className="form-group">
+                  <label>Votazione Squadra 2 (numero verde)</label>
+                  <input name="team2_rating" value={nextMatch.team2_rating} onChange={handleNextMatchChange} placeholder="es. 6.8" />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>MVP della partita (nome, colore giallo)</label>
+                <input name="mvp_name" value={nextMatch.mvp_name} onChange={handleNextMatchChange} placeholder="Nome MVP" />
+              </div>
+              <div className="form-actions">
+                <button type="submit" className="btn btn-primary">Salva Prossimo match</button>
+              </div>
+            </form>
+          </div>
         )}
 
         {/* ============ USERS TAB ============ */}
