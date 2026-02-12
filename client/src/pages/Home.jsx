@@ -75,7 +75,8 @@ export default function Home() {
               <p>Nessun giocatore presente</p>
             </div>
           ) : (
-            <div className="table-container">
+            <div className="table-scroll-wrap">
+              <div className="table-container">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -91,25 +92,26 @@ export default function Home() {
                 <tbody>
                   {players.map((p, i) => (
                     <tr key={p.id} className={i === 0 ? 'row-first' : ''}>
-                      <td className="col-rank">
+                      <td className="col-rank" data-label="#">
                         {i === 0 ? <span className="medal gold">🥇</span> : i === 1 ? <span className="medal silver">🥈</span> : i === 2 ? <span className="medal bronze">🥉</span> : <span className="rank-num">{i + 1}</span>}
                       </td>
-                      <td className="col-name">
+                      <td className="col-name" data-label="Giocatore">
                         <Link to={`/giocatori/${p.id}`} className="player-name-link">{p.name}</Link>
                       </td>
-                      <td className="col-number">{p.number || '-'}</td>
-                      <td className="col-pos">{p.position || '-'}</td>
-                      <td className="col-stat">{p.matches}</td>
-                      <td className="col-stat col-goals">
+                      <td className="col-number" data-label="N°">{p.number || '-'}</td>
+                      <td className="col-pos" data-label="Posizione">{p.position || '-'}</td>
+                      <td className="col-stat" data-label="Partite">{p.matches}</td>
+                      <td className="col-stat col-goals" data-label="Goal">
                         <span className="goal-badge">{p.goals}</span>
                       </td>
-                      <td className="col-stat">
+                      <td className="col-stat" data-label="Media">
                         {p.matches > 0 ? (p.goals / p.matches).toFixed(2) : '0.00'}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
 
