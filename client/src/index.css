@@ -25,6 +25,7 @@
 html {
   font-size: 16px;
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
@@ -33,9 +34,10 @@ body {
   color: var(--white);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
-#root { min-height: 100vh; }
+#root { min-height: 100vh; max-width: 100%; }
 
 a { color: var(--green); text-decoration: none; transition: color var(--transition); }
 a:hover { color: var(--green-dark); }
@@ -332,7 +334,7 @@ a:hover { color: var(--green-dark); }
 /* Logout spostato nel profilo */
 
 /* MAIN CONTENT */
-.app-layout { min-height: 100vh; }
+.app-layout { min-height: 100vh; width: 100%; max-width: 100%; }
 
 /* HOME BACKGROUND */
 .home-bg {
@@ -1560,6 +1562,100 @@ a:hover { color: var(--green-dark); }
 .aic-return { color: var(--gray); font-size: 12px; margin-top: 2px; }
 .aic-actions { display: flex; gap: 8px; flex-shrink: 0; }
 
+/* Classifica responsive: layout a card da tablet e mobile (fino a 992px) */
+@media (max-width: 992px) {
+  .table-scroll-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow: visible;
+  }
+
+  .table-container {
+    overflow: visible;
+    width: 100%;
+    max-width: 100%;
+    border-radius: var(--radius);
+  }
+
+  .table-container .data-table {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .table-container .data-table thead {
+    display: none !important;
+  }
+
+  .table-container .data-table tbody {
+    display: block !important;
+  }
+
+  .table-container .data-table tbody tr {
+    display: block !important;
+    background: var(--black-card);
+    border: 1px solid var(--gray-dark);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+
+  .table-container .data-table tbody tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .table-container .data-table tbody tr.row-first {
+    border-color: var(--green);
+    box-shadow: 0 0 0 1px var(--green-dim);
+  }
+
+  .table-container .data-table tbody td {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--gray-dark);
+    font-size: 14px;
+  }
+
+  .table-container .data-table tbody td:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .table-container .data-table tbody td::before {
+    content: attr(data-label);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--gray);
+    margin-right: 12px;
+  }
+
+  .table-container .data-table tbody td.col-rank {
+    padding-top: 0;
+    border-bottom: 1px solid var(--gray-dark);
+  }
+
+  .table-container .data-table tbody td.col-name {
+    word-break: break-word;
+    min-width: 0;
+  }
+
+  .table-container .data-table tbody td.col-rank,
+  .table-container .data-table tbody td.col-number,
+  .table-container .data-table tbody td.col-stat {
+    width: auto;
+    min-width: 0;
+  }
+
+  .table-container .data-table .goal-badge {
+    font-size: 14px;
+    padding: 4px 12px;
+  }
+}
+
 /* RESPONSIVE - Mobile first improvements */
 @media (max-width: 768px) {
   html {
@@ -1570,9 +1666,25 @@ a:hover { color: var(--green-dark); }
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
 
+  .app-layout {
+    overflow-x: hidden;
+  }
+
+  .main-content {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
   .navbar {
     padding-left: env(safe-area-inset-left, 0);
     padding-right: env(safe-area-inset-right, 0);
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .home-bg {
+    overflow-x: hidden;
+    max-width: 100%;
   }
 
   .navbar-inner {
@@ -1581,6 +1693,7 @@ a:hover { color: var(--green-dark); }
     padding: 12px 16px;
     gap: 10px;
     min-height: 64px;
+    max-width: 100%;
   }
 
   .brand-logo {
@@ -1653,11 +1766,23 @@ a:hover { color: var(--green-dark); }
   .table-container {
     overflow: visible;
     width: 100%;
+    max-width: 100%;
     border-radius: var(--radius);
+  }
+
+  /* Forza la tabella a non usare layout tabellare: niente overflow orizzontale */
+  .table-container .data-table {
+    display: block;
+    width: 100%;
+    max-width: 100%;
   }
 
   .table-container .data-table thead {
     display: none;
+  }
+
+  .table-container .data-table tbody {
+    display: block;
   }
 
   .table-container .data-table tbody tr {
@@ -1720,6 +1845,20 @@ a:hover { color: var(--green-dark); }
     padding: 4px 12px;
   }
 
+  /* Le celle in card non devono avere larghezza fissa */
+  .table-container .data-table tbody td.col-rank,
+  .table-container .data-table tbody td.col-number,
+  .table-container .data-table tbody td.col-stat {
+    width: auto;
+    min-width: 0;
+  }
+
+  .table-container .data-table .col-name {
+    word-break: break-word;
+    min-width: 0;
+  }
+
+  /* Regole per altre tabelle (es. Admin) che restano tabellari su mobile */
   .data-table th,
   .data-table td {
     padding: 12px 10px;
