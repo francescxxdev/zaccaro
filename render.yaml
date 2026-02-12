@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: jurevo-backend
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: node server.js
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: DATA_DIR
+        value: /opt/render/data
+      - key: CORS_ORIGIN
+        value: *
+    disk:
+      name: data
+      mountPath: /opt/render/data
+      sizeGB: 1

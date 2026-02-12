@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Classifica Marcatori - Zaccaro's World Cup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <%- include('partials/nav', { active: 'home' }) %>
+
+  <div class="container">
+    <div class="page-header">
+      <div class="badge">🏆 Stagione 2024/2025</div>
+      <h1 class="page-title font-orb">CLASSIFICA <span class="accent">MARCATORI</span></h1>
+      <p class="page-sub">I migliori marcatori del torneo Zaccaro's World Cup</p>
+    </div>
+
+    <% if (players.length === 0) { %>
+    <div style="text-align:center;padding:4rem 0;color:#555">
+      <div style="font-size:4rem;margin-bottom:1rem;opacity:0.3">🏆</div>
+      <p style="font-size:1.1rem">Nessun giocatore ancora registrato</p>
+    </div>
+    <% } else { %>
+
+    <% if (players[0]) { %>
+    <div class="top-card">
+      <div class="top-icon">👑</div>
+      <div class="top-info">
+        <div class="top-label">Capocannoniere</div>
+        <div class="top-name font-orb"><%= players[0].name.toUpperCase() %></div>
+        <div class="top-pos"><%= players[0].position %></div>
+      </div>
+      <div class="top-stats">
+        <div>
+          <div class="top-stat-num accent font-orb"><%= players[0].goals %></div>
+          <div class="top-stat-label">Goal</div>
+        </div>
+        <div>
+          <div class="top-stat-num font-orb" style="color:#ccc"><%= players[0].matches %></div>
+          <div class="top-stat-label">Partite</div>
+        </div>
+      </div>
+    </div>
+    <% } %>
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="center" style="width:60px">#</th>
+            <th>Giocatore</th>
+            <th class="center">⚽ Goal</th>
+            <th class="center">🎮 Partite</th>
+            <th class="center">Media</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% players.forEach(function(p, i) { %>
+          <tr<%= i === 0 ? ' style="background:rgba(250,204,21,0.03)"' : '' %>>
+            <td class="center">
+              <% if (i === 0) { %>
+              <span class="rank rank-1">🥇</span>
+              <% } else if (i === 1) { %>
+              <span class="rank rank-2">🥈</span>
+              <% } else if (i === 2) { %>
+              <span class="rank rank-3">🥉</span>
+              <% } else { %>
+              <span class="rank rank-default"><%= i + 1 %></span>
+              <% } %>
+            </td>
+            <td>
+              <div class="player-name"><%= p.name %></div>
+              <div class="player-pos"><%= p.position %></div>
+            </td>
+            <td class="center">
+              <span class="goals-num <%= i === 0 ? 'goals-top' : '' %>"><%= p.goals %></span>
+            </td>
+            <td class="center">
+              <span class="matches-num"><%= p.matches %></span>
+            </td>
+            <td class="center" style="color:#888">
+              <%= p.matches > 0 ? (p.goals / p.matches).toFixed(2) : '0.00' %>
+            </td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="legend">
+      <span>⚽ Goal</span>
+      <span>🎮 Partite giocate</span>
+    </div>
+
+    <% } %>
+  </div>
+</body>
+</html>

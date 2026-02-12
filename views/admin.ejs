@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Admin - Zaccaro's World Cup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <script>
+    function toggleEdit(id) {
+      var el = document.getElementById('edit-' + id);
+      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+    function toggleAdd() {
+      var el = document.getElementById('add-form');
+      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+  </script>
+</head>
+<body>
+  <%- include('partials/nav', { active: 'admin' }) %>
+
+  <div class="container">
+    <div class="page-header">
+      <div class="badge">🛡️ Pannello Admin</div>
+      <h1 class="page-title font-orb">DASHBOARD <span class="accent">ADMIN</span></h1>
+      <p class="page-sub">Gestisci giocatori, goal e statistiche</p>
+    </div>
+
+    <% if (message) { %>
+    <div class="<%= message.type === 'success' ? 'success-box' : 'error-box' %>"><%= message.text %></div>
+    <% } %>
+
+    <div class="admin-header">
+      <div class="admin-count">👥 Giocatori (<%= players.length %>)</div>
+      <button onclick="toggleAdd()" class="btn btn-primary btn-sm">+ Aggiungi</button>
+    </div>
+
+    <div id="add-form" style="display:none">
+      <div class="add-section">
+        <h3>Nuovo Giocatore</h3>
+        <form method="POST" action="/admin/add">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Nome *</label>
+              <input type="text" name="name" class="form-input" placeholder="Nome completo" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Posizione</label>
+              <input type="text" name="position" class="form-input" placeholder="Es. Attaccante">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Goal</label>
+              <input type="number" name="goals" class="form-input" value="0" min="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Partite</label>
+              <input type="number" name="matches" class="form-input" value="0" min="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Altezza</label>
+              <input type="text" name="height" class="form-input" placeholder="Es. 180 cm">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Numero maglia</label>
+              <input type="number" name="number" class="form-input" value="0" min="0">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Descrizione</label>
+            <textarea name="description" class="form-input" placeholder="Descrizione del giocatore..."></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-sm">💾 Salva</button>
+            <button type="button" onclick="toggleAdd()" class="btn btn-outline btn-sm">Annulla</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <% players.forEach(function(p) { %>
+    <div class="admin-player">
+      <div class="admin-player-row">
+        <div class="admin-player-num font-orb"><%= p.number > 0 ? p.number : '?' %></div>
+        <div class="admin-player-info">
+          <div class="admin-player-name"><%= p.name %></div>
+          <div class="admin-player-meta"><%= p.position || 'N/D' %> · <%= p.goals %> goal · <%= p.matches %> partite</div>
+        </div>
+        <div class="admin-actions">
+          <button onclick="toggleEdit(<%= p.id %>)" class="btn btn-edit btn-sm">✏️ Modifica</button>
+          <form method="POST" action="/admin/delete/<%= p.id %>" style="display:inline" onsubmit="return confirm('Eliminare <%= p.name %>?')">
+            <button type="submit" class="btn btn-danger btn-sm">🗑️ Elimina</button>
+          </form>
+        </div>
+      </div>
+
+      <div id="edit-<%= p.id %>" class="admin-form" style="display:none">
+        <form method="POST" action="/admin/edit/<%= p.id %>">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Nome</label>
+              <input type="text" name="name" class="form-input" value="<%= p.name %>" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Posizione</label>
+              <input type="text" name="position" class="form-input" value="<%= p.position %>">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Goal</label>
+              <input type="number" name="goals" class="form-input" value="<%= p.goals %>" min="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Partite</label>
+              <input type="number" name="matches" class="form-input" value="<%= p.matches %>" min="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Altezza</label>
+              <input type="text" name="height" class="form-input" value="<%= p.height %>">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Numero maglia</label>
+              <input type="number" name="number" class="form-input" value="<%= p.number %>" min="0">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Descrizione</label>
+            <textarea name="description" class="form-input"><%= p.description %></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-sm">💾 Salva</button>
+            <button type="button" onclick="toggleEdit(<%= p.id %>)" class="btn btn-outline btn-sm">Annulla</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <% }); %>
+  </div>
+</body>
+</html>

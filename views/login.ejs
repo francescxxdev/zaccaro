@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accedi - Zaccaro's World Cup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-wrap">
+      <div class="auth-header">
+        <div class="auth-icon">🏆</div>
+        <h1 class="font-orb" style="font-size:1.5rem;font-weight:800;color:#fff;letter-spacing:0.1em">
+          ZACCARO'S <span class="accent">WORLD CUP</span>
+        </h1>
+      </div>
+      <div class="auth-box">
+        <h2 class="auth-title">Accedi</h2>
+        <% if (error) { %>
+        <div class="error-box"><%= error %></div>
+        <% } %>
+        <form method="POST" action="/login">
+          <div class="form-group">
+            <label class="form-label">Nome utente</label>
+            <input type="text" name="username" class="form-input" placeholder="Inserisci username" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" name="password" class="form-input" placeholder="Inserisci password" required>
+          </div>
+          <button type="submit" class="btn btn-primary">🔑 ACCEDI</button>
+        </form>
+        <div class="auth-footer">
+          Non hai un account? <a href="/register">Registrati</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

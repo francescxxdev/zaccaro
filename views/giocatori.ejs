@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Giocatori - Zaccaro's World Cup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <%- include('partials/nav', { active: 'giocatori' }) %>
+
+  <div class="container">
+    <div class="page-header">
+      <div class="badge">👥 Rosa completa</div>
+      <h1 class="page-title font-orb">I <span class="accent">GIOCATORI</span></h1>
+      <p class="page-sub">Clicca su un giocatore per vedere il profilo completo</p>
+    </div>
+
+    <% if (players.length === 0) { %>
+    <div style="text-align:center;padding:4rem 0;color:#555">
+      <div style="font-size:4rem;margin-bottom:1rem;opacity:0.3">👥</div>
+      <p style="font-size:1.1rem">Nessun giocatore registrato</p>
+    </div>
+    <% } else { %>
+
+    <div class="cards-grid">
+      <% players.forEach(function(p) { %>
+      <a href="/giocatori/<%= p.id %>" class="card">
+        <div class="card-top">
+          <div class="card-num font-orb"><%= p.number > 0 ? p.number : '?' %></div>
+          <div class="card-info">
+            <div class="card-name"><%= p.name %></div>
+            <div class="card-position"><%= p.position || 'N/D' %></div>
+          </div>
+          <span class="card-arrow">→</span>
+        </div>
+        <div class="card-stats">
+          <div class="card-stat">
+            <span>⚽</span>
+            <span class="card-stat-val"><%= p.goals %></span>
+            <span class="card-stat-label">goal</span>
+          </div>
+          <div class="card-stat">
+            <span>🎮</span>
+            <span class="card-stat-val"><%= p.matches %></span>
+            <span class="card-stat-label">partite</span>
+          </div>
+        </div>
+      </a>
+      <% }); %>
+    </div>
+
+    <% } %>
+  </div>
+</body>
+</html>

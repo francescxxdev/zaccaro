@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= player.name %> - Zaccaro's World Cup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <%- include('partials/nav', { active: 'giocatori' }) %>
+
+  <div class="container" style="max-width:800px">
+    <a href="/giocatori" class="detail-back">← Tutti i giocatori</a>
+
+    <div class="detail-card">
+      <div class="detail-header">
+        <div class="detail-num font-orb"><%= player.number > 0 ? player.number : '?' %></div>
+        <div>
+          <div class="detail-name font-orb"><%= player.name.toUpperCase() %></div>
+          <div class="detail-meta">
+            <% if (player.position) { %>
+            <span class="detail-meta-item"><span class="accent">📍</span> <%= player.position %></span>
+            <% } %>
+            <% if (player.height) { %>
+            <span class="detail-meta-item"><span class="accent">📏</span> <%= player.height %></span>
+            <% } %>
+            <% if (player.number > 0) { %>
+            <span class="detail-meta-item"><span class="accent">#</span> Numero <%= player.number %></span>
+            <% } %>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-stats">
+        <div class="detail-stat">
+          <div class="detail-stat-num accent font-orb"><%= player.goals %></div>
+          <div class="detail-stat-label">Goal</div>
+        </div>
+        <div class="detail-stat">
+          <div class="detail-stat-num font-orb" style="color:#60a5fa"><%= player.matches %></div>
+          <div class="detail-stat-label">Partite</div>
+        </div>
+        <div class="detail-stat">
+          <div class="detail-stat-num font-orb" style="color:#facc15"><%= player.matches > 0 ? (player.goals / player.matches).toFixed(2) : '0.00' %></div>
+          <div class="detail-stat-label">Media Goal</div>
+        </div>
+      </div>
+
+      <% if (player.description) { %>
+      <div class="detail-desc">
+        <h3>Descrizione</h3>
+        <p><%= player.description %></p>
+      </div>
+      <% } %>
+    </div>
+  </div>
+</body>
+</html>

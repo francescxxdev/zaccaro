@@ -1,0 +1,21 @@
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">
+      <div class="nav-logo-icon">🏆</div>
+      <span class="nav-logo-text font-orb">ZACCARO'S <span class="accent">WORLD CUP</span></span>
+    </a>
+    <% if (user) { %>
+    <div class="nav-links">
+      <a href="/" class="nav-link <%= typeof active !== 'undefined' && active === 'home' ? 'active' : '' %>">🏠 Classifica</a>
+      <a href="/giocatori" class="nav-link <%= typeof active !== 'undefined' && active === 'giocatori' ? 'active' : '' %>">👥 Giocatori</a>
+      <% if (user.isAdmin) { %>
+      <a href="/admin" class="nav-link <%= typeof active !== 'undefined' && active === 'admin' ? 'active' : '' %>">🛡️ Dashboard</a>
+      <% } %>
+    </div>
+    <div class="nav-right">
+      <span>Ciao, <span class="accent"><%= user.username %></span></span>
+      <a href="/logout" class="btn-logout">Esci</a>
+    </div>
+    <% } %>
+  </div>
+</nav>
