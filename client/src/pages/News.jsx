@@ -12,6 +12,9 @@ export default function News() {
   const [editText, setEditText] = useState({});
   const [avatarErr, setAvatarErr] = useState({});
   const [formAvatarErr, setFormAvatarErr] = useState(false);
+  const [replyTo, setReplyTo] = useState(null);
+  const [replyText, setReplyText] = useState({});
+  const [likingId, setLikingId] = useState(null);
 
   const loadNews = () => {
     authFetch('/api/news')
@@ -36,26 +39,65 @@ export default function News() {
   };
 
   const getCommentById = (commentId) => {
+    const search = (list) => {
+      for (const c of list || []) {
+        if (Number(c.id) === Number(commentId)) return c;
+        const inReplies = search(c.replies);
+        if (inReplies) return inReplies;
+      }
+      return null;
+    };
     for (const n of news) {
-      const found = (n.comments || []).find((c) => Number(c.id) === Number(commentId));
+      const found = search(n.comments || []);
       if (found) return found;
     }
     return null;
   };
 
-  const handleComment = async (newsId) => {
-    const text = commentText[newsId];
+  const handleComment = async (newsId, parentId = null) => {
+    const text = parentId ? replyText[parentId] : commentText[newsId];
     if (!text || !text.trim()) return;
     try {
       const res = await authFetch(`/api/news/${newsId}/comments`, {
         method: 'POST',
-        body: JSON.stringify({ content: text }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parentId ? { content: text.trim(), parent_id: parentId } : { content: text.trim() }),
       });
       if (res.ok) {
-        setCommentText((prev) => ({ ...prev, [newsId]: '' }));
+        if (parentId) {
+          setReplyText((prev) => ({ ...prev, [parentId]: '' }));
+          setReplyTo(null);
+        } else {
+          setCommentText((prev) => ({ ...prev, [newsId]: '' }));
+        }
         loadNews();
       }
     } catch { void 0; }
+  };
+
+  const handleLike = async (commentId) => {
+    if (likingId) return;
+    setLikingId(commentId);
+    try {
+      const res = await authFetch(`/api/comments/${commentId}/like`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setNews((prev) => prev.map((n) => ({
+          ...n,
+          comments: updateCommentLike(n.comments, commentId, data.liked, data.likeCount),
+        })));
+      }
+    } catch { void 0; }
+    finally { setLikingId(null); }
+  };
+
+  const updateCommentLike = (comments, commentId, liked, likeCount) => {
+    return (comments || []).map((c) => {
+      if (Number(c.id) === Number(commentId)) {
+        return { ...c, userLiked: liked, likeCount };
+      }
+      return { ...c, replies: updateCommentLike(c.replies, commentId, liked, likeCount) };
+    });
   };
 
   const handleDeleteComment = async (commentId) => {
@@ -164,44 +206,128 @@ export default function News() {
                     ) : (
                       <div className="comments-list">
                         {n.comments.map((c) => (
-                          <div key={c.id} className="comment">
-                            <div className="comment-avatar">
-                              {(() => {
-                                const src = c.avatar ? imageUrl(c.avatar) : '';
-                                return (src && !avatarErr[c.id])
-                                  ? <img src={src} alt={c.username} onError={() => setAvatarErr((p) => ({ ...p, [c.id]: true }))} />
-                                  : c.username.slice(0, 2).toUpperCase();
-                              })()}
-                            </div>
-                            <div className="comment-body">
-                              <div className="comment-header">
-                                <span className="comment-user">{c.username} {c.verified ? <span className="verified-badge" title="Verificato">✓</span> : null}</span>
-                                <span className="comment-date">{formatDate(c.created_at)}</span>
+                          <div key={c.id} className="comment-wrapper">
+                            <div className="comment">
+                              <div className="comment-avatar">
+                                {(() => {
+                                  const src = c.avatar ? imageUrl(c.avatar) : '';
+                                  return (src && !avatarErr[c.id])
+                                    ? <img src={src} alt={c.username} onError={() => setAvatarErr((p) => ({ ...p, [c.id]: true }))} />
+                                    : c.username.slice(0, 2).toUpperCase();
+                                })()}
                               </div>
-                              {editOpen[c.id] ? (
-                                <div className="comment-form" style={{ marginTop: 6 }}>
-                                  <input
-                                    type="text"
-                                    placeholder="Modifica il tuo commento..."
-                                    value={editText[c.id] ?? c.content}
-                                    onChange={(e) => setEditText((prev) => ({ ...prev, [c.id]: e.target.value }))}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleEditComment(c.id)}
-                                  />
-                                  <button className="btn btn-primary btn-sm" onClick={() => handleEditComment(c.id)}>Salva</button>
-                                  <button className="btn btn-secondary btn-sm" onClick={() => setEditOpen((prev) => ({ ...prev, [c.id]: false }))}>Annulla</button>
+                              <div className="comment-body">
+                                <div className="comment-header">
+                                  <span className="comment-user">{c.username} {c.verified ? <span className="verified-badge" title="Verificato">✓</span> : null}</span>
+                                  <span className="comment-date">{formatDate(c.created_at)}</span>
                                 </div>
-                              ) : (
-                                <p className="comment-text">{c.deleted ? 'Commento eliminato' : c.content}</p>
-                              )}
-                              <div className="comment-actions">
-                                {user && (
-                                  <>
-                                    <button className="comment-action-btn" onClick={() => setEditOpen((prev) => ({ ...prev, [c.id]: true }))}>Modifica</button>
-                                    <button className="comment-action-btn" onClick={() => handleDeleteComment(c.id)}>Elimina</button>
-                                  </>
+                                {editOpen[c.id] ? (
+                                  <div className="comment-form" style={{ marginTop: 6 }}>
+                                    <input
+                                      type="text"
+                                      placeholder="Modifica il tuo commento..."
+                                      value={editText[c.id] ?? c.content}
+                                      onChange={(e) => setEditText((prev) => ({ ...prev, [c.id]: e.target.value }))}
+                                      onKeyDown={(e) => e.key === 'Enter' && handleEditComment(c.id)}
+                                    />
+                                    <button className="btn btn-primary btn-sm" onClick={() => handleEditComment(c.id)}>Salva</button>
+                                    <button className="btn btn-secondary btn-sm" onClick={() => setEditOpen((prev) => ({ ...prev, [c.id]: false }))}>Annulla</button>
+                                  </div>
+                                ) : (
+                                  <p className="comment-text">{c.deleted ? 'Commento eliminato' : c.content}</p>
                                 )}
+                                <div className="comment-actions">
+                                  {user && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className={`comment-action-btn comment-like-btn ${c.userLiked ? 'liked' : ''}`}
+                                        onClick={() => handleLike(c.id)}
+                                        disabled={likingId === c.id}
+                                        title="Mi piace"
+                                      >
+                                        ♥ {c.likeCount != null ? c.likeCount : 0}
+                                      </button>
+                                      <button type="button" className="comment-action-btn" onClick={() => setReplyTo(replyTo === c.id ? null : c.id)}>Rispondi</button>
+                                      {(user?.id === c.user_id || user?.isAdmin) && (
+                                        <>
+                                          <button className="comment-action-btn" onClick={() => setEditOpen((prev) => ({ ...prev, [c.id]: true }))}>Modifica</button>
+                                          <button className="comment-action-btn" onClick={() => handleDeleteComment(c.id)}>Elimina</button>
+                                        </>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             </div>
+                            {replyTo === c.id && user && (
+                              <div className="comment-reply-form">
+                                <input
+                                  type="text"
+                                  placeholder="Scrivi una risposta..."
+                                  value={replyText[c.id] || ''}
+                                  onChange={(e) => setReplyText((prev) => ({ ...prev, [c.id]: e.target.value }))}
+                                  onKeyDown={(e) => e.key === 'Enter' && handleComment(n.id, c.id)}
+                                />
+                                <button className="btn btn-primary btn-sm" onClick={() => handleComment(n.id, c.id)}>Invia</button>
+                                <button className="btn btn-secondary btn-sm" onClick={() => { setReplyTo(null); setReplyText((prev) => ({ ...prev, [c.id]: '' })); }}>Annulla</button>
+                              </div>
+                            )}
+                            {(c.replies || []).length > 0 && (
+                              <div className="comment-replies">
+                                {c.replies.map((r) => (
+                                  <div key={r.id} className="comment comment-reply">
+                                    <div className="comment-avatar">
+                                      {(r.avatar && !avatarErr[r.id])
+                                        ? <img src={imageUrl(r.avatar)} alt={r.username} onError={() => setAvatarErr((p) => ({ ...p, [r.id]: true }))} />
+                                        : r.username.slice(0, 2).toUpperCase()}
+                                    </div>
+                                    <div className="comment-body">
+                                      <div className="comment-header">
+                                        <span className="comment-user">{r.username} {r.verified ? <span className="verified-badge" title="Verificato">✓</span> : null}</span>
+                                        <span className="comment-date">{formatDate(r.created_at)}</span>
+                                      </div>
+                                      {editOpen[r.id] ? (
+                                        <div className="comment-form" style={{ marginTop: 6 }}>
+                                          <input
+                                            type="text"
+                                            placeholder="Modifica..."
+                                            value={editText[r.id] ?? r.content}
+                                            onChange={(e) => setEditText((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleEditComment(r.id)}
+                                          />
+                                          <button className="btn btn-primary btn-sm" onClick={() => handleEditComment(r.id)}>Salva</button>
+                                          <button className="btn btn-secondary btn-sm" onClick={() => setEditOpen((prev) => ({ ...prev, [r.id]: false }))}>Annulla</button>
+                                        </div>
+                                      ) : (
+                                        <p className="comment-text">{r.deleted ? 'Commento eliminato' : r.content}</p>
+                                      )}
+                                      <div className="comment-actions">
+                                        {user && (
+                                          <>
+                                            <button
+                                              type="button"
+                                              className={`comment-action-btn comment-like-btn ${r.userLiked ? 'liked' : ''}`}
+                                              onClick={() => handleLike(r.id)}
+                                              disabled={likingId === r.id}
+                                              title="Mi piace"
+                                            >
+                                              ♥ {r.likeCount != null ? r.likeCount : 0}
+                                            </button>
+                                            {(user?.id === r.user_id || user?.isAdmin) && (
+                                              <>
+                                                <button className="comment-action-btn" onClick={() => setEditOpen((prev) => ({ ...prev, [r.id]: true }))}>Modifica</button>
+                                                <button className="comment-action-btn" onClick={() => handleDeleteComment(r.id)}>Elimina</button>
+                                              </>
+                                            )}
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

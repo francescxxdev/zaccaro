@@ -1663,12 +1663,37 @@ a:hover { color: var(--green-dark); }
   cursor: pointer;
 }
 .comment-action-btn:hover { border-color: #444; color: var(--green); }
+.comment-wrapper { margin-bottom: 4px; }
 .comment-replies {
-  margin-left: 42px;
+  margin-left: 28px;
+  padding-left: 14px;
+  border-left: 2px solid var(--gray-dark);
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-top: 8px;
+}
+.comment-reply .comment-avatar { width: 28px; height: 28px; font-size: 10px; }
+.comment-like-btn { color: var(--gray); }
+.comment-like-btn.liked { color: #ef4444; }
+.comment-like-btn:disabled { opacity: 0.6; cursor: wait; }
+.comment-reply-form {
+  margin-left: 42px;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.comment-reply-form input {
+  flex: 1;
+  min-width: 160px;
+  padding: 8px 12px;
+  font-size: 13px;
+  background: var(--black-light);
+  border: 1px solid var(--gray-dark);
+  border-radius: var(--radius-sm);
+  color: var(--white);
 }
 
 .comment-form {

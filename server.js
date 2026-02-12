@@ -114,6 +114,16 @@ try { db.exec("ALTER TABLE users ADD COLUMN verified INTEGER DEFAULT 0"); } catc
 try { db.exec("ALTER TABLE comments ADD COLUMN avatar TEXT DEFAULT ''"); } catch {}
 try { db.exec("ALTER TABLE comments ADD COLUMN parent_id INTEGER"); } catch {}
 try { db.exec("ALTER TABLE comments ADD COLUMN deleted INTEGER DEFAULT 0"); } catch {}
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS comment_likes (
+      comment_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      PRIMARY KEY (comment_id, user_id),
+      FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE
+    )
+  `);
+} catch (e) { console.error("comment_likes init:", e); }
 
 // Ensure a default admin account exists and is the only admin
 try {
@@ -337,9 +347,38 @@ app.delete("/api/admin/players/:id", authMiddleware, adminMiddleware, (req, res)
   res.json({ success: true });
 });
 
+// Helper: aggiunge likeCount e userLiked ai commenti (parents con .replies)
+function enrichCommentsWithLikes(comments, userId) {
+  const allIds = [];
+  const walk = (list) => {
+    (list || []).forEach((c) => {
+      allIds.push(c.id);
+      walk(c.replies);
+    });
+  };
+  walk(comments);
+  if (allIds.length === 0) return comments;
+  const counts = db.prepare("SELECT comment_id, COUNT(*) AS cnt FROM comment_likes WHERE comment_id IN (?" + ",?".repeat(allIds.length - 1) + ") GROUP BY comment_id").all(...allIds);
+  const countMap = {};
+  counts.forEach((r) => { countMap[r.comment_id] = r.cnt; });
+  let likedIds = [];
+  if (userId) {
+    likedIds = db.prepare("SELECT comment_id FROM comment_likes WHERE user_id = ? AND comment_id IN (?" + ",?".repeat(allIds.length - 1) + ")").all(userId, ...allIds).map((r) => r.comment_id);
+  }
+  const likedSet = new Set(likedIds);
+  const add = (list) => (list || []).map((c) => ({
+    ...c,
+    likeCount: countMap[c.id] || 0,
+    userLiked: likedSet.has(c.id),
+    replies: add(c.replies),
+  }));
+  return add(comments);
+}
+
 // NEWS
 app.get("/api/news", authMiddleware, (req, res) => {
   const news = db.prepare("SELECT * FROM news ORDER BY created_at DESC").all();
+  const userId = req.user?.id;
   const result = news.map((n) => {
     const all = db.prepare(`
       SELECT c.*, COALESCE(NULLIF(c.avatar, ''), u.avatar, '') AS avatar, COALESCE(u.verified, 0) AS verified
@@ -351,7 +390,7 @@ app.get("/api/news", authMiddleware, (req, res) => {
     const parents = all.filter((c) => !c.parent_id);
     const comments = parents.map((p) => ({ ...p, replies: all.filter((c) => c.parent_id === p.id) }));
     const count = all.length;
-    return { ...n, comments, commentCount: count };
+    return { ...n, comments: enrichCommentsWithLikes(comments, userId), commentCount: count };
   });
   res.json(result);
 });
@@ -359,14 +398,16 @@ app.get("/api/news", authMiddleware, (req, res) => {
 app.get("/api/news/:id", authMiddleware, (req, res) => {
   const n = db.prepare("SELECT * FROM news WHERE id = ?").get(req.params.id);
   if (!n) return res.status(404).json({ error: "News non trovata" });
-  const comments = db.prepare(`
+  const all = db.prepare(`
     SELECT c.*, COALESCE(NULLIF(c.avatar, ''), u.avatar, '') AS avatar, COALESCE(u.verified, 0) AS verified
     FROM comments c
     LEFT JOIN users u ON u.id = c.user_id
     WHERE c.news_id = ?
     ORDER BY c.created_at ASC
   `).all(n.id);
-  res.json({ ...n, comments });
+  const parents = all.filter((c) => !c.parent_id);
+  const comments = parents.map((p) => ({ ...p, replies: all.filter((c) => c.parent_id === p.id) }));
+  res.json({ ...n, comments: enrichCommentsWithLikes(comments, req.user?.id) });
 });
 
 // Helper: parse lineup JSON (7 slot: { playerId, playerName, vote, mvp })
@@ -533,6 +574,22 @@ app.delete("/api/comments/:id", authMiddleware, (req, res) => {
     db.prepare("DELETE FROM comments WHERE id = ?").run(req.params.id);
   }
   res.json({ success: true });
+});
+
+// Like commento (toggle)
+app.post("/api/comments/:id/like", authMiddleware, (req, res) => {
+  const commentId = parseInt(req.params.id, 10);
+  const c = db.prepare("SELECT id FROM comments WHERE id = ?").get(commentId);
+  if (!c) return res.status(404).json({ error: "Commento non trovato" });
+  const userId = req.user.id;
+  const existing = db.prepare("SELECT 1 FROM comment_likes WHERE comment_id = ? AND user_id = ?").get(commentId, userId);
+  if (existing) {
+    db.prepare("DELETE FROM comment_likes WHERE comment_id = ? AND user_id = ?").run(commentId, userId);
+  } else {
+    db.prepare("INSERT INTO comment_likes (comment_id, user_id) VALUES (?, ?)").run(commentId, userId);
+  }
+  const likeCount = db.prepare("SELECT COUNT(*) AS cnt FROM comment_likes WHERE comment_id = ?").get(commentId).cnt;
+  res.json({ liked: !existing, likeCount });
 });
 
 // Fallback POST endpoints (alcuni proxy possono limitare PUT/DELETE)
