@@ -364,6 +364,17 @@ export default function Admin() {
     }
   };
 
+  const handleResetNextMatch = () => {
+    setNextMatch(prev => ({
+      ...prev,
+      team1_score: '',
+      team2_score: '',
+      team1_lineup: emptyLineup(),
+      team2_lineup: emptyLineup(),
+    }));
+    flash('Formazioni, voti, MVP e risultato azzerati. Salva per applicare le modifiche.');
+  };
+
   const VOTE_OPTIONS = ['', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5', '5.5', '6', '6.5', '7', '7+', '7-', '7.5', '8', '8+', '8-', '8.5', '9', '9.5', '10'];
   const used = usedPlayerIds();
 
@@ -725,6 +736,9 @@ export default function Admin() {
               <div className="form-actions">
                 <button type="button" className="btn btn-primary" disabled={savingNextMatch} onClick={() => handleSaveNextMatch({ preventDefault: () => {} })}>
                   {savingNextMatch ? 'Salvataggio...' : 'Salva Prossimo match'}
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={handleResetNextMatch} title="Azzera giocatori, voti, MVP e risultato">
+                  Reset
                 </button>
               </div>
             </form>
