@@ -28,13 +28,26 @@ export function AuthProvider({ children }) {
   }, [token, API_BASE]);
 
   const login = async (username, password) => {
-    const res = await fetch(`${API_BASE}/api/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    let res;
+    let data = {};
+    try {
+      res = await fetch(`${API_BASE}/api/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      const text = await res.text();
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw new Error(`Risposta non valida dal server (status ${res.status})`);
+        }
+      }
+    } catch (err) {
+      throw new Error(err?.message || 'Errore di rete durante il login');
+    }
+    if (!res.ok) throw new Error(data.error || `Errore login (status ${res.status})`);
     localStorage.setItem('token', data.token);
     setToken(data.token);
     setUser(data.user);
@@ -42,13 +55,26 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (username, password) => {
-    const res = await fetch(`${API_BASE}/api/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    let res;
+    let data = {};
+    try {
+      res = await fetch(`${API_BASE}/api/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      const text = await res.text();
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw new Error(`Risposta non valida dal server (status ${res.status})`);
+        }
+      }
+    } catch (err) {
+      throw new Error(err?.message || 'Errore di rete durante la registrazione');
+    }
+    if (!res.ok) throw new Error(data.error || `Errore registrazione (status ${res.status})`);
     localStorage.setItem('token', data.token);
     setToken(data.token);
     setUser(data.user);
