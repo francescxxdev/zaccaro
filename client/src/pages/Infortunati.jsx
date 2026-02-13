@@ -27,9 +27,9 @@ export default function Infortunati() {
         <div className="page-header">
           <h1>
             <span className="title-icon">🏥</span>
-            Infortunati
+            Indisponibili
           </h1>
-          <p className="page-subtitle">Situazione infortuni dei giocatori</p>
+          <p className="page-subtitle">Situazione indisponibilità dei giocatori</p>
         </div>
 
         {loading ? (
@@ -37,7 +37,7 @@ export default function Infortunati() {
         ) : injuries.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">✅</div>
-            <p>Nessun giocatore infortunato!</p>
+            <p>Nessun giocatore indisponibile!</p>
           </div>
         ) : (
           <div className="injuries-list">

@@ -2031,3 +2031,56 @@ a:hover { color: var(--green-dark); }
     font-size: 28px;
   }
 }
+
+/* FEATURED (MVP / POTM) */
+.featured-page { padding-bottom: 40px; }
+.featured-page .page-header { margin-bottom: 24px; }
+.featured-mvp .page-header h1 { color: #ffd54f; }
+.featured-mvp .featured-card { border-color: rgba(255, 213, 79, 0.4); background: linear-gradient(135deg, rgba(255, 213, 79, 0.08) 0%, transparent 50%); }
+.featured-potm .page-header h1 { color: #4fc3f7; }
+.featured-potm .featured-card { border-color: rgba(79, 195, 247, 0.4); background: linear-gradient(135deg, rgba(79, 195, 247, 0.08) 0%, transparent 50%); }
+
+.featured-card {
+  max-width: 520px;
+  margin: 0 auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-dark);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px;
+  gap: 20px;
+}
+
+.featured-image-wrap {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 3px solid var(--gray-dark);
+}
+.featured-image-wrap .featured-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.featured-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--black-hover);
+  color: var(--gray-light);
+  font-size: 48px;
+  font-weight: 700;
+}
+
+.featured-body { text-align: center; width: 100%; }
+.featured-title { font-size: 1.1rem; color: var(--gray-light); margin-bottom: 8px; font-weight: 600; }
+.featured-player-name { font-size: 1.5rem; margin-bottom: 12px; }
+.featured-stats { display: flex; justify-content: center; gap: 20px; margin-bottom: 12px; flex-wrap: wrap; }
+.featured-stat { color: var(--gray); font-size: 0.95rem; }
+.featured-description { color: var(--gray-light); line-height: 1.5; font-size: 0.95rem; }

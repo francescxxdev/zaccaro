@@ -24,8 +24,14 @@ export default function Navbar() {
             <Link to="/news" className={`nav-link ${isActive('/news') ? 'active' : ''}`}>
               News
             </Link>
+            <Link to="/mvp" className={`nav-link ${isActive('/mvp') ? 'active' : ''}`}>
+              MVP
+            </Link>
+            <Link to="/potm" className={`nav-link ${isActive('/potm') ? 'active' : ''}`}>
+              POTM
+            </Link>
             <Link to="/infortunati" className={`nav-link ${isActive('/infortunati') ? 'active' : ''}`}>
-              Infortunati
+              Indisponibili
             </Link>
             {user?.isAdmin && (
               <Link to="/admin" className={`nav-link nav-admin ${isActive('/admin') ? 'active' : ''}`}>

@@ -57,6 +57,13 @@ export default function Admin() {
   const [savingNextMatch, setSavingNextMatch] = useState(false);
   const nextMatchFormRef = useRef(null);
 
+  // MVP / POTM (featured)
+  const [featuredMvp, setFeaturedMvp] = useState(null);
+  const [featuredPotm, setFeaturedPotm] = useState(null);
+  const [featuredForm, setFeaturedForm] = useState({ mvp: { player_id: '', title: '', description: '', removeImage: false }, potm: { player_id: '', title: '', description: '', removeImage: false } });
+  const [featuredImageFile, setFeaturedImageFile] = useState({ mvp: null, potm: null });
+  const [savingFeatured, setSavingFeatured] = useState({ mvp: false, potm: false });
+
   const [message, setMessage] = useState(null);
   const { authFetch, imageUrl } = useAuth();
 
@@ -66,6 +73,8 @@ export default function Admin() {
       authFetch('/api/news').then(r => r.json()),
       authFetch('/api/injuries').then(r => r.json()),
       authFetch('/api/next-match').then(r => (r.ok ? r.json() : null)).catch(() => null),
+      authFetch('/api/featured/mvp').then(r => r.ok ? r.json() : null).catch(() => null),
+      authFetch('/api/featured/potm').then(r => r.ok ? r.json() : null).catch(() => null),
       authFetch('/api/admin/users').then(async (r) => {
         if (!r.ok) {
           try {
@@ -91,10 +100,18 @@ export default function Admin() {
       }),
     ])
       .then((results) => {
-        const [p, n, i, nm, u] = results;
+        const [p, n, i, nm, fm, fpotm, u] = results;
         if (p.status === 'fulfilled') setPlayers(p.value);
         if (n.status === 'fulfilled') setNews(n.value);
         if (i.status === 'fulfilled') setInjuries(i.value);
+        if (fm.status === 'fulfilled' && fm.value) {
+          setFeaturedMvp(fm.value);
+          setFeaturedForm(prev => ({ ...prev, mvp: { player_id: fm.value.player_id ?? '', title: fm.value.title || '', description: fm.value.description || '', removeImage: false } }));
+        }
+        if (fpotm.status === 'fulfilled' && fpotm.value) {
+          setFeaturedPotm(fpotm.value);
+          setFeaturedForm(prev => ({ ...prev, potm: { player_id: fpotm.value.player_id ?? '', title: fpotm.value.title || '', description: fpotm.value.description || '', removeImage: false } }));
+        }
         if (nm.status === 'fulfilled' && nm.value && typeof nm.value === 'object') {
           const v = nm.value;
           const t1 = Array.isArray(v.team1_lineup) ? [...v.team1_lineup] : emptyLineup();
@@ -285,6 +302,32 @@ export default function Admin() {
     flash('Infortunio eliminato!'); if (editingInjuryId === id) resetInjury(); loadAll();
   };
 
+  const handleFeaturedChange = (type, field, value) => {
+    setFeaturedForm(prev => ({ ...prev, [type]: { ...prev[type], [field]: value } }));
+  };
+  const handleSaveFeatured = async (type) => {
+    setSavingFeatured(prev => ({ ...prev, [type]: true }));
+    const form = featuredForm[type];
+    const fd = new FormData();
+    fd.append('player_id', form.player_id ?? '');
+    fd.append('title', form.title ?? '');
+    fd.append('description', form.description ?? '');
+    if (form.removeImage) fd.append('removeImage', 'true');
+    const file = featuredImageFile[type];
+    if (file) fd.append('image', file, 'featured.jpg');
+    try {
+      const res = await authFetch(`/api/admin/featured/${type}`, { method: 'PUT', body: fd });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); flash(d.error || 'Errore salvataggio', 'error'); return; }
+      const data = await res.json();
+      if (type === 'mvp') setFeaturedMvp(data); else setFeaturedPotm(data);
+      setFeaturedForm(prev => ({ ...prev, [type]: { ...prev[type], removeImage: false } }));
+      setFeaturedImageFile(prev => ({ ...prev, [type]: null }));
+      flash(type === 'mvp' ? 'MVP aggiornato!' : 'POTM aggiornato!');
+    } finally {
+      setSavingFeatured(prev => ({ ...prev, [type]: false }));
+    }
+  };
+
   const handleNextMatchChange = (e) => {
     const { name, value } = e.target;
     setNextMatch(prev => ({ ...prev, [name]: value }));
@@ -401,7 +444,13 @@ export default function Admin() {
             📰 News ({news.length})
           </button>
           <button className={`admin-tab ${tab === 'injuries' ? 'active' : ''}`} onClick={() => setTab('injuries')}>
-            🏥 Infortunati ({injuries.length})
+            🏥 Indisponibili ({injuries.length})
+          </button>
+          <button className={`admin-tab ${tab === 'mvp' ? 'active' : ''}`} onClick={() => setTab('mvp')}>
+            ⭐ MVP
+          </button>
+          <button className={`admin-tab ${tab === 'potm' ? 'active' : ''}`} onClick={() => setTab('potm')}>
+            🏅 POTM
           </button>
           <button className={`admin-tab ${tab === 'users' ? 'active' : ''}`} onClick={() => setTab('users')}>
             ✅ Utenti verificati ({users.filter(u => u.verified).length})
@@ -583,7 +632,7 @@ export default function Admin() {
           <>
             {editingInjuryId && (
               <div className="admin-section">
-                <h2>Modifica Infortunio</h2>
+                <h2>Modifica indisponibilità</h2>
                 <form onSubmit={handleUpdateInjury} className="admin-form">
                   {renderInjuryFields()}
                   <div className="form-actions">
@@ -596,10 +645,10 @@ export default function Admin() {
             {!editingInjuryId && (
               <div className="admin-section">
                 {!showAddInjury ? (
-                  <button className="btn btn-primary btn-add" onClick={() => setShowAddInjury(true)}>+ Aggiungi Infortunio</button>
+                  <button className="btn btn-primary btn-add" onClick={() => setShowAddInjury(true)}>+ Aggiungi indisponibilità</button>
                 ) : (
                   <>
-                    <h2>Nuovo Infortunio</h2>
+                    <h2>Nuova indisponibilità</h2>
                     <form onSubmit={handleAddInjury} className="admin-form">
                       {renderInjuryFields()}
                       <div className="form-actions">
@@ -612,7 +661,7 @@ export default function Admin() {
               </div>
             )}
             <div className="admin-section">
-              <h2>Infortuni ({injuries.length})</h2>
+              <h2>Indisponibilità ({injuries.length})</h2>
               <div className="admin-injuries-list">
                 {injuries.map(inj => (
                   <div key={inj.id} className={`admin-injury-card ${editingInjuryId === inj.id ? 'editing' : ''}`}>
@@ -628,10 +677,90 @@ export default function Admin() {
                     </div>
                   </div>
                 ))}
-                {injuries.length === 0 && <div className="empty-state"><p>Nessun infortunio</p></div>}
+                {injuries.length === 0 && <div className="empty-state"><p>Nessuna indisponibilità</p></div>}
               </div>
             </div>
           </>
+        )}
+
+        {/* ============ MVP TAB ============ */}
+        {tab === 'mvp' && (
+          <div className="admin-section featured-admin">
+            <h2>⭐ MVP – Miglior giocatore della giornata</h2>
+            <p className="admin-hint">Seleziona il giocatore, titolo, descrizione e opzionalmente una foto. La pagina MVP mostra goal e partite del giocatore.</p>
+            <form className="admin-form" onSubmit={(e) => { e.preventDefault(); handleSaveFeatured('mvp'); }}>
+              <div className="form-group">
+                <label>Giocatore</label>
+                <select value={featuredForm.mvp.player_id} onChange={(e) => handleFeaturedChange('mvp', 'player_id', e.target.value)}>
+                  <option value="">— Nessuno —</option>
+                  {players.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} (⚽ {p.goals} – 🟢 {p.matches} partite)</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group"><label>Titolo</label><input value={featuredForm.mvp.title} onChange={(e) => handleFeaturedChange('mvp', 'title', e.target.value)} placeholder="es. Miglior giocatore del torneo" /></div>
+              <div className="form-group"><label>Descrizione</label><textarea value={featuredForm.mvp.description} onChange={(e) => handleFeaturedChange('mvp', 'description', e.target.value)} rows={3} placeholder="Breve descrizione..." /></div>
+              <div className="form-group form-group-full">
+                <label>Foto</label>
+                <div className="image-upload-area">
+                  {(featuredImageFile.mvp || (featuredMvp?.image && !featuredForm.mvp.removeImage)) ? (
+                    <div className="image-preview-box">
+                      <img src={featuredImageFile.mvp ? URL.createObjectURL(featuredImageFile.mvp) : imageUrl(featuredMvp.image)} alt="MVP" className="image-preview" />
+                      <div className="image-preview-actions">
+                        <label className="btn btn-sm btn-edit image-change-btn">Cambia<input type="file" accept="image/*" onChange={(e) => { const f = e.target.files[0]; if (f) setFeaturedImageFile(prev => ({ ...prev, mvp: f })); e.target.value = ''; }} hidden /></label>
+                        <button type="button" className="btn btn-sm btn-delete" onClick={() => { setFeaturedImageFile(prev => ({ ...prev, mvp: null })); handleFeaturedChange('mvp', 'removeImage', true); }}>Rimuovi</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="image-dropzone"><span>🖼️</span><p>Carica foto MVP</p><input type="file" accept="image/*" onChange={(e) => { const f = e.target.files[0]; if (f) setFeaturedImageFile(prev => ({ ...prev, mvp: f })); e.target.value = ''; }} hidden /></label>
+                  )}
+                </div>
+              </div>
+              <div className="form-actions">
+                <button type="submit" className="btn btn-primary" disabled={savingFeatured.mvp}>{savingFeatured.mvp ? 'Salvataggio...' : 'Salva MVP'}</button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* ============ POTM TAB ============ */}
+        {tab === 'potm' && (
+          <div className="admin-section featured-admin">
+            <h2>🏅 POTM – Giocatore del mese</h2>
+            <p className="admin-hint">Seleziona il giocatore, titolo, descrizione e opzionalmente una foto. La pagina POTM mostra goal e partite del giocatore.</p>
+            <form className="admin-form" onSubmit={(e) => { e.preventDefault(); handleSaveFeatured('potm'); }}>
+              <div className="form-group">
+                <label>Giocatore</label>
+                <select value={featuredForm.potm.player_id} onChange={(e) => handleFeaturedChange('potm', 'player_id', e.target.value)}>
+                  <option value="">— Nessuno —</option>
+                  {players.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} (⚽ {p.goals} – 🟢 {p.matches} partite)</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group"><label>Titolo</label><input value={featuredForm.potm.title} onChange={(e) => handleFeaturedChange('potm', 'title', e.target.value)} placeholder="es. Uomo partita" /></div>
+              <div className="form-group"><label>Descrizione</label><textarea value={featuredForm.potm.description} onChange={(e) => handleFeaturedChange('potm', 'description', e.target.value)} rows={3} placeholder="Breve descrizione..." /></div>
+              <div className="form-group form-group-full">
+                <label>Foto</label>
+                <div className="image-upload-area">
+                  {(featuredImageFile.potm || (featuredPotm?.image && !featuredForm.potm.removeImage)) ? (
+                    <div className="image-preview-box">
+                      <img src={featuredImageFile.potm ? URL.createObjectURL(featuredImageFile.potm) : imageUrl(featuredPotm.image)} alt="POTM" className="image-preview" />
+                      <div className="image-preview-actions">
+                        <label className="btn btn-sm btn-edit image-change-btn">Cambia<input type="file" accept="image/*" onChange={(e) => { const f = e.target.files[0]; if (f) setFeaturedImageFile(prev => ({ ...prev, potm: f })); e.target.value = ''; }} hidden /></label>
+                        <button type="button" className="btn btn-sm btn-delete" onClick={() => { setFeaturedImageFile(prev => ({ ...prev, potm: null })); handleFeaturedChange('potm', 'removeImage', true); }}>Rimuovi</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="image-dropzone"><span>🖼️</span><p>Carica foto POTM</p><input type="file" accept="image/*" onChange={(e) => { const f = e.target.files[0]; if (f) setFeaturedImageFile(prev => ({ ...prev, potm: f })); e.target.value = ''; }} hidden /></label>
+                  )}
+                </div>
+              </div>
+              <div className="form-actions">
+                <button type="submit" className="btn btn-primary" disabled={savingFeatured.potm}>{savingFeatured.potm ? 'Salvataggio...' : 'Salva POTM'}</button>
+              </div>
+            </form>
+          </div>
         )}
 
         {/* ============ PROSSIMO MATCH TAB ============ */}

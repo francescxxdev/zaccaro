@@ -38,6 +38,15 @@ const userStorage = multer.diskStorage({
   },
 });
 const uploadUser = multer({ storage: userStorage, limits: { fileSize: 5 * 1024 * 1024 } });
+const featuredStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const t = (req.params && req.params.type) || "featured";
+    cb(null, `${t}-${Date.now()}${ext}`);
+  },
+});
+const uploadFeatured = multer({ storage: featuredStorage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
@@ -124,6 +133,23 @@ try {
     )
   `);
 } catch (e) { console.error("comment_likes init:", e); }
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS featured_player (
+      type TEXT PRIMARY KEY,
+      player_id INTEGER,
+      title TEXT DEFAULT '',
+      description TEXT DEFAULT '',
+      image TEXT DEFAULT '',
+      FOREIGN KEY (player_id) REFERENCES players(id)
+    )
+  `);
+  ["mvp", "potm"].forEach((t) => {
+    if (!db.prepare("SELECT 1 FROM featured_player WHERE type = ?").get(t)) {
+      db.prepare("INSERT INTO featured_player (type) VALUES (?)").run(t);
+    }
+  });
+} catch (e) { console.error("featured_player init:", e); }
 
 // Ensure a default admin account exists and is the only admin
 try {
@@ -393,6 +419,41 @@ app.get("/api/news", authMiddleware, (req, res) => {
     return { ...n, comments: enrichCommentsWithLikes(comments, userId), commentCount: count };
   });
   res.json(result);
+});
+
+// MVP / POTM (featured player)
+app.get("/api/featured/:type", authMiddleware, (req, res) => {
+  const type = req.params.type === "mvp" || req.params.type === "potm" ? req.params.type : null;
+  if (!type) return res.status(400).json({ error: "Tipo non valido" });
+  const row = db.prepare("SELECT * FROM featured_player WHERE type = ?").get(type);
+  if (!row || row.player_id == null) return res.json({ type, player_id: null, title: "", description: "", image: "", player: null });
+  const player = db.prepare("SELECT * FROM players WHERE id = ?").get(row.player_id);
+  res.json({ type: row.type, player_id: row.player_id, title: row.title || "", description: row.description || "", image: row.image || "", player: player || null });
+});
+app.put("/api/admin/featured/:type", authMiddleware, adminMiddleware, uploadFeatured.single("image"), (req, res) => {
+  const type = req.params.type === "mvp" || req.params.type === "potm" ? req.params.type : null;
+  if (!type) return res.status(400).json({ error: "Tipo non valido" });
+  const player_id = req.body.player_id != null && req.body.player_id !== "" ? parseInt(req.body.player_id, 10) : null;
+  const title = (req.body.title || "").trim();
+  const description = (req.body.description || "").trim();
+  const existing = db.prepare("SELECT * FROM featured_player WHERE type = ?").get(type);
+  let image = existing ? (existing.image || "") : "";
+  if (req.file) {
+    if (existing && existing.image) { const p = path.join(__dirname, existing.image); if (fs.existsSync(p)) fs.unlinkSync(p); }
+    image = `/uploads/${req.file.filename}`;
+  }
+  if (req.body.removeImage === "true") {
+    if (existing && existing.image) { const p = path.join(__dirname, existing.image); if (fs.existsSync(p)) fs.unlinkSync(p); }
+    image = "";
+  }
+  if (existing) {
+    db.prepare("UPDATE featured_player SET player_id=?, title=?, description=?, image=? WHERE type=?").run(player_id, title, description, image, type);
+  } else {
+    db.prepare("INSERT INTO featured_player (type, player_id, title, description, image) VALUES (?, ?, ?, ?, ?)").run(type, player_id, title, description, image);
+  }
+  const row = db.prepare("SELECT * FROM featured_player WHERE type = ?").get(type);
+  const player = row && row.player_id ? db.prepare("SELECT * FROM players WHERE id = ?").get(row.player_id) : null;
+  res.json({ type: row.type, player_id: row.player_id, title: row.title || "", description: row.description || "", image: row.image || "", player: player });
 });
 
 app.get("/api/news/:id", authMiddleware, (req, res) => {
