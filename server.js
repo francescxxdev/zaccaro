@@ -14,6 +14,19 @@ const JWT_SECRET = "zaccaro-world-cup-secret-2024-jwt";
 const uploadsDir = path.join(DATA_DIR, "uploads");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 
+// Su deploy (es. Render): copia uploads dal repo a DATA_DIR/uploads se vuoto
+const repoUploads = path.join(__dirname, "uploads");
+if (fs.existsSync(repoUploads) && path.resolve(repoUploads) !== path.resolve(uploadsDir)) {
+  const files = fs.readdirSync(repoUploads);
+  for (const f of files) {
+    const src = path.join(repoUploads, f);
+    const dest = path.join(uploadsDir, f);
+    if (fs.statSync(src).isFile() && !fs.existsSync(dest)) {
+      fs.copyFileSync(src, dest);
+    }
+  }
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => {
@@ -172,23 +185,36 @@ try {
   console.error("Errore durante la verifica/creazione dell'admin di default:", e);
 }
 
-// Auto-seed: se il database è vuoto (nessun giocatore/news), inserisci dati iniziali
+// Auto-seed: se DB vuoto o FORCE_SYNC_PLAYERS=1, carica da players-export.json
 try {
+  const forceSync = process.env.FORCE_SYNC_PLAYERS === "1";
   const playerCount = db.prepare("SELECT COUNT(*) as count FROM players").get().count;
-  if (playerCount === 0) {
-    const players = [
-      { name: "Giacinto Lesce", goals: 5, matches: 8, height: "178 cm", position: "Centrocampista", description: "Giocatore tecnico con grande visione di gioco.", number: 7 },
-      { name: "Francesco Russo", goals: 4, matches: 10, height: "182 cm", position: "Attaccante", description: "Leader con ottime capacità di finalizzazione.", number: 9 },
-      { name: "Giuseppe Papasso", goals: 6, matches: 9, height: "175 cm", position: "Attaccante", description: "Puro goleador, sempre pericoloso in area.", number: 22 },
-      { name: "Luca Argentano", goals: 8, matches: 7, height: "180 cm", position: "Attaccante", description: "Veloce e scattante, pericoloso in contropiede.", number: 14 },
-      { name: "Gabriele Guerrieri", goals: 2, matches: 8, height: "177 cm", position: "Centrocampista", description: "Centrocampista di sostegno.", number: 8 },
-      { name: "Antonio Graniti", goals: 0, matches: 5, height: "185 cm", position: "Difensore", description: "Difensore centrale solido.", number: 31 },
-    ];
+  const shouldSeed = playerCount === 0 || forceSync;
+  if (shouldSeed) {
+    const exportPath = path.join(__dirname, "scripts", "players-export.json");
+    let players = [];
+    if (fs.existsSync(exportPath)) {
+      try {
+        players = JSON.parse(fs.readFileSync(exportPath, "utf8"));
+      } catch (e) { console.error("Errore lettura players-export.json:", e); }
+    }
+    if (players.length === 0) {
+      players = [
+        { name: "Giacinto Lesce", goals: 5, matches: 8, height: "178 cm", position: "Centrocampista", description: "Giocatore tecnico con grande visione di gioco.", number: 7, image: "" },
+        { name: "Francesco Russo", goals: 4, matches: 10, height: "182 cm", position: "Attaccante", description: "Leader con ottime capacità di finalizzazione.", number: 9, image: "" },
+      ];
+    }
+    if (forceSync && playerCount > 0) {
+      db.prepare("UPDATE featured_player SET player_id = NULL WHERE player_id IS NOT NULL").run();
+      db.prepare("DELETE FROM players").run();
+    }
     const stmt = db.prepare(
-      "INSERT INTO players (name, goals, matches, height, position, description, number) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO players (name, goals, matches, height, position, description, number, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     );
-    for (const p of players) stmt.run(p.name, p.goals, p.matches, p.height, p.position, p.description, p.number);
-    console.log("Dati iniziali: giocatori inseriti");
+    for (const p of players) {
+      stmt.run(p.name, p.goals || 0, p.matches || 0, p.height || "", p.position || "", p.description || "", p.number || 0, p.image || "");
+    }
+    console.log("Dati iniziali: " + players.length + " giocatori inseriti" + (forceSync ? " (sync forzato)" : ""));
   }
   const newsCount = db.prepare("SELECT COUNT(*) as count FROM news").get().count;
   if (newsCount === 0) {
